@@ -16,9 +16,8 @@
 
 #define LOG_TAG "unicode"
 
-#include <android-base/macros.h>
-#include <limits.h>
 #include <utils/Unicode.h>
+#include <limits.h>
 
 #include <log/log.h>
 
@@ -106,11 +105,8 @@ static inline void utf32_codepoint_to_utf8(uint8_t* dstP, char32_t srcChar, size
     switch (bytes)
     {   /* note: everything falls through. */
         case 4: *--dstP = (uint8_t)((srcChar | kByteMark) & kByteMask); srcChar >>= 6;
-            FALLTHROUGH_INTENDED;
         case 3: *--dstP = (uint8_t)((srcChar | kByteMark) & kByteMask); srcChar >>= 6;
-            FALLTHROUGH_INTENDED;
         case 2: *--dstP = (uint8_t)((srcChar | kByteMark) & kByteMask); srcChar >>= 6;
-            FALLTHROUGH_INTENDED;
         case 1: *--dstP = (uint8_t)(srcChar | kFirstByteMark[bytes]);
     }
 }
@@ -341,6 +337,27 @@ int strzcmp16(const char16_t *s1, size_t n1, const char16_t *s2, size_t n2)
         ? (0 - (int)*s2)
         : (n1 > n2
            ? ((int)*s1 - 0)
+           : 0);
+}
+
+int strzcmp16_h_n(const char16_t *s1H, size_t n1, const char16_t *s2N, size_t n2)
+{
+    const char16_t* e1 = s1H+n1;
+    const char16_t* e2 = s2N+n2;
+
+    while (s1H < e1 && s2N < e2) {
+        const char16_t c2 = ntohs(*s2N);
+        const int d = (int)*s1H++ - (int)c2;
+        s2N++;
+        if (d) {
+            return d;
+        }
+    }
+
+    return n1 < n2
+        ? (0 - (int)ntohs(*s2N))
+        : (n1 > n2
+           ? ((int)*s1H - 0)
            : 0);
 }
 
