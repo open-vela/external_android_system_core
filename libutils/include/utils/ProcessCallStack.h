@@ -43,13 +43,13 @@ public:
 
     // Print all stack traces to the log using the supplied logtag.
     void log(const char* logtag, android_LogPriority priority = ANDROID_LOG_DEBUG,
-             const char* prefix = nullptr) const;
+             const char* prefix = 0) const;
 
     // Dump all stack traces to the specified file descriptor.
-    void dump(int fd, int indent = 0, const char* prefix = nullptr) const;
+    void dump(int fd, int indent = 0, const char* prefix = 0) const;
 
     // Return a string (possibly very long) containing all the stack traces.
-    String8 toString(const char* prefix = nullptr) const;
+    String8 toString(const char* prefix = 0) const;
 
     // Dump a serialized representation of all the stack traces to the specified printer.
     void print(Printer& printer) const;
@@ -74,6 +74,6 @@ private:
     struct tm mTimeUpdated;
 };
 
-}  // namespace android
+}; // namespace android
 
 #endif // ANDROID_PROCESS_CALLSTACK_H

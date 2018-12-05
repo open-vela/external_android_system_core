@@ -31,8 +31,7 @@
 namespace android {
 
 class String16;
-
-// DO NOT USE: please use std::string
+class TextOutput;
 
 //! This is a string holding UTF-8 characters. Does not allow the value more
 // than 0x10FFFF, which is not valid unicode codepoint.
@@ -68,6 +67,7 @@ public:
     inline  const char*         c_str() const;
     inline  const char*         string() const;
 
+// TODO(b/35363681): remove
 private:
     static inline std::string   std_string(const String8& str);
 public:
@@ -187,7 +187,7 @@ public:
      * "/tmp" --> "tmp" (remain = "")
      * "bar.c" --> "bar.c" (remain = "")
      */
-    String8 walkPath(String8* outRemains = nullptr) const;
+    String8 walkPath(String8* outRemains = NULL) const;
 
     /*
      * Return the filename extension.  This is the last '.' and any number
