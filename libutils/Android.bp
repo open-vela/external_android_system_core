@@ -15,7 +15,6 @@
 cc_library_headers {
     name: "libutils_headers",
     vendor_available: true,
-    recovery_available: true,
     host_supported: true,
 
     header_libs: [
@@ -47,7 +46,6 @@ cc_library_headers {
 cc_defaults {
     name: "libutils_defaults",
     vendor_available: true,
-    recovery_available: true,
     vndk: {
         enabled: true,
         support_system_process: true,
@@ -58,8 +56,8 @@ cc_defaults {
         "-Wall",
         "-Werror",
     ],
+    include_dirs: ["external/safe-iop/include"],
     header_libs: [
-        "libbase_headers",
         "libutils_headers",
     ],
     export_header_lib_headers: [
@@ -89,10 +87,6 @@ cc_defaults {
             sanitize: {
                 misc_undefined: ["integer"],
             },
-        },
-
-        recovery: {
-            exclude_shared_libs: ["libvndksupport"],
         },
 
         host: {
@@ -135,6 +129,7 @@ cc_library {
         "PropertyMap.cpp",
         "RefBase.cpp",
         "SharedBuffer.cpp",
+        "Static.cpp",
         "StopWatch.cpp",
         "String8.cpp",
         "String16.cpp",
@@ -155,7 +150,6 @@ cc_library {
             ],
         },
         linux: {
-            header_libs: ["libbase_headers"],
             srcs: [
                 "Looper.cpp",
             ],

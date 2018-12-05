@@ -52,7 +52,9 @@ private:
     int             mNumLaps;
 };
 
-}  // namespace android
+
+}; // namespace android
+
 
 // ---------------------------------------------------------------------------
 

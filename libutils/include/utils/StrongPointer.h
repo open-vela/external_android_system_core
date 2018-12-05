@@ -52,11 +52,11 @@ inline bool operator _op_ (const wp<U>& o) const {              \
 template<typename T>
 class sp {
 public:
-    inline sp() : m_ptr(nullptr) { }
+    inline sp() : m_ptr(0) { }
 
     sp(T* other);  // NOLINT(implicit)
     sp(const sp<T>& other);
-    sp(sp<T>&& other) noexcept;
+    sp(sp<T>&& other);
     template<typename U> sp(U* other);  // NOLINT(implicit)
     template<typename U> sp(const sp<U>& other);  // NOLINT(implicit)
     template<typename U> sp(sp<U>&& other);  // NOLINT(implicit)
@@ -67,7 +67,7 @@ public:
 
     sp& operator = (T* other);
     sp& operator = (const sp<T>& other);
-    sp& operator=(sp<T>&& other) noexcept;
+    sp& operator = (sp<T>&& other);
 
     template<typename U> sp& operator = (const sp<U>& other);
     template<typename U> sp& operator = (sp<U>&& other);
@@ -125,8 +125,9 @@ sp<T>::sp(const sp<T>& other)
         m_ptr->incStrong(this);
 }
 
-template <typename T>
-sp<T>::sp(sp<T>&& other) noexcept : m_ptr(other.m_ptr) {
+template<typename T>
+sp<T>::sp(sp<T>&& other)
+        : m_ptr(other.m_ptr) {
     other.m_ptr = nullptr;
 }
 
@@ -168,8 +169,8 @@ sp<T>& sp<T>::operator =(const sp<T>& other) {
     return *this;
 }
 
-template <typename T>
-sp<T>& sp<T>::operator=(sp<T>&& other) noexcept {
+template<typename T>
+sp<T>& sp<T>::operator =(sp<T>&& other) {
     T* oldPtr(*const_cast<T* volatile*>(&m_ptr));
     if (oldPtr) oldPtr->decStrong(this);
     if (oldPtr != *const_cast<T* volatile*>(&m_ptr)) sp_report_race();
@@ -227,11 +228,9 @@ void sp<T>::force_set(T* other) {
 
 template<typename T>
 void sp<T>::clear() {
-    T* oldPtr(*const_cast<T* volatile*>(&m_ptr));
-    if (oldPtr) {
-        oldPtr->decStrong(this);
-        if (oldPtr != *const_cast<T* volatile*>(&m_ptr)) sp_report_race();
-        m_ptr = nullptr;
+    if (m_ptr) {
+        m_ptr->decStrong(this);
+        m_ptr = 0;
     }
 }
 
@@ -240,7 +239,7 @@ void sp<T>::set_pointer(T* ptr) {
     m_ptr = ptr;
 }
 
-}  // namespace android
+}; // namespace android
 
 // ---------------------------------------------------------------------------
 
