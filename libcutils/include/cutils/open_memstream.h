@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (C) 2010 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,23 @@
  * limitations under the License.
  */
 
-#ifndef ANDROID_UTILS_SYSTEMCLOCK_H
-#define ANDROID_UTILS_SYSTEMCLOCK_H
+#ifndef __CUTILS_OPEN_MEMSTREAM_H__
+#define __CUTILS_OPEN_MEMSTREAM_H__
 
-#include <stdint.h>
-#include <sys/types.h>
+#include <stdio.h>
 
-namespace android {
+#if defined(__APPLE__)
 
-int64_t uptimeMillis();
-int64_t elapsedRealtime();
-int64_t elapsedRealtimeNano();
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-}; // namespace android
+FILE* open_memstream(char** bufp, size_t* sizep);
 
-#endif // ANDROID_UTILS_SYSTEMCLOCK_H
+#ifdef __cplusplus
+}
+#endif
 
+#endif /* __APPLE__ */
+
+#endif /*__CUTILS_OPEN_MEMSTREAM_H__*/

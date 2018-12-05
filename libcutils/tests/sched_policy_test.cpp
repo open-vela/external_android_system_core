@@ -60,28 +60,7 @@ long long medianSleepTime() {
     return sleepTimes[median];
 }
 
-static void AssertPolicy(SchedPolicy expected_policy) {
-    SchedPolicy current_policy;
-    ASSERT_EQ(0, get_sched_policy(0, &current_policy));
-    EXPECT_EQ(expected_policy, current_policy);
-}
-
 TEST(SchedPolicy, set_sched_policy) {
-    if (!schedboost_enabled()) {
-        // schedboost_enabled() (i.e. CONFIG_CGROUP_SCHEDTUNE) is optional;
-        // it's only needed on devices using energy-aware scheduler.
-        GTEST_LOG_(INFO) << "skipping test that requires CONFIG_CGROUP_SCHEDTUNE";
-        return;
-    }
-
-    ASSERT_EQ(0, set_sched_policy(0, SP_BACKGROUND));
-    AssertPolicy(SP_BACKGROUND);
-
-    ASSERT_EQ(0, set_sched_policy(0, SP_FOREGROUND));
-    AssertPolicy(SP_FOREGROUND);
-}
-
-TEST(SchedPolicy, set_sched_policy_timerslack) {
     if (!hasCapSysNice()) {
         GTEST_LOG_(INFO) << "skipping test that requires CAP_SYS_NICE";
         return;
@@ -104,8 +83,16 @@ TEST(SchedPolicy, set_sched_policy_timerslack) {
     ASSERT_GT(bgSleepTime, fgSleepTime * BG_FG_SLACK_FACTOR);
 }
 
-TEST(SchedPolicy, get_sched_policy_name) {
-    EXPECT_STREQ("bg", get_sched_policy_name(SP_BACKGROUND));
-    EXPECT_STREQ("error", get_sched_policy_name(SchedPolicy(-2)));
-    EXPECT_STREQ("error", get_sched_policy_name(SP_CNT));
+TEST(SchedPolicy, get_sched_policy) {
+    SchedPolicy policy;
+    ASSERT_EQ(0, get_sched_policy(0, &policy));
+
+    const char *policyName = get_sched_policy_name(policy);
+    EXPECT_NE(nullptr, policyName);
+    EXPECT_STRNE("error", policyName);
+
+    ASSERT_EQ(0, set_sched_policy(0, SP_BACKGROUND));
+    SchedPolicy newPolicy;
+    ASSERT_EQ(0, get_sched_policy(0, &newPolicy));
+    EXPECT_EQ(SP_BACKGROUND, newPolicy);
 }
