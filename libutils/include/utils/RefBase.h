@@ -354,7 +354,7 @@ class wp
 public:
     typedef typename RefBase::weakref_type weakref_type;
 
-    inline wp() : m_ptr(nullptr) { }
+    inline wp() : m_ptr(0) { }
 
     wp(T* other);  // NOLINT(implicit)
     wp(const wp<T>& other);
@@ -505,7 +505,7 @@ template<typename T>
 wp<T>& wp<T>::operator = (T* other)
 {
     weakref_type* newRefs =
-        other ? other->createWeak(this) : nullptr;
+        other ? other->createWeak(this) : 0;
     if (m_ptr) m_refs->decWeak(this);
     m_ptr = other;
     m_refs = newRefs;
@@ -528,7 +528,7 @@ template<typename T>
 wp<T>& wp<T>::operator = (const sp<T>& other)
 {
     weakref_type* newRefs =
-        other != nullptr ? other->createWeak(this) : nullptr;
+        other != NULL ? other->createWeak(this) : 0;
     T* otherPtr(other.m_ptr);
     if (m_ptr) m_refs->decWeak(this);
     m_ptr = otherPtr;
@@ -563,7 +563,7 @@ template<typename T> template<typename U>
 wp<T>& wp<T>::operator = (const sp<U>& other)
 {
     weakref_type* newRefs =
-        other != nullptr ? other->createWeak(this) : 0;
+        other != NULL ? other->createWeak(this) : 0;
     U* otherPtr(other.m_ptr);
     if (m_ptr) m_refs->decWeak(this);
     m_ptr = otherPtr;
@@ -683,7 +683,7 @@ void move_backward_type(wp<TYPE>* d, wp<TYPE> const* s, size_t n) {
     ReferenceMover::move_references(d, s, n);
 }
 
-}  // namespace android
+}; // namespace android
 
 // ---------------------------------------------------------------------------
 
