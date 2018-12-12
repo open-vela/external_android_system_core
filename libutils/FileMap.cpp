@@ -48,44 +48,58 @@ using namespace android;
 
 // Constructor.  Create an empty object.
 FileMap::FileMap(void)
-    : mFileName(NULL), mBasePtr(NULL), mBaseLength(0),
-      mDataPtr(NULL), mDataLength(0)
+    : mFileName(nullptr),
+      mBasePtr(nullptr),
+      mBaseLength(0),
+      mDataPtr(nullptr),
+      mDataLength(0)
+#if defined(__MINGW32__)
+      ,
+      mFileHandle(INVALID_HANDLE_VALUE),
+      mFileMapping(NULL)
+#endif
 {
 }
 
 // Move Constructor.
-FileMap::FileMap(FileMap&& other)
-    : mFileName(other.mFileName), mBasePtr(other.mBasePtr), mBaseLength(other.mBaseLength),
-      mDataOffset(other.mDataOffset), mDataPtr(other.mDataPtr), mDataLength(other.mDataLength)
+FileMap::FileMap(FileMap&& other) noexcept
+    : mFileName(other.mFileName),
+      mBasePtr(other.mBasePtr),
+      mBaseLength(other.mBaseLength),
+      mDataOffset(other.mDataOffset),
+      mDataPtr(other.mDataPtr),
+      mDataLength(other.mDataLength)
 #if defined(__MINGW32__)
-      , mFileHandle(other.mFileHandle), mFileMapping(other.mFileMapping)
+      ,
+      mFileHandle(other.mFileHandle),
+      mFileMapping(other.mFileMapping)
 #endif
 {
-    other.mFileName = NULL;
-    other.mBasePtr = NULL;
-    other.mDataPtr = NULL;
+    other.mFileName = nullptr;
+    other.mBasePtr = nullptr;
+    other.mDataPtr = nullptr;
 #if defined(__MINGW32__)
-    other.mFileHandle = 0;
-    other.mFileMapping = 0;
+    other.mFileHandle = INVALID_HANDLE_VALUE;
+    other.mFileMapping = NULL;
 #endif
 }
 
 // Move assign operator.
-FileMap& FileMap::operator=(FileMap&& other) {
+FileMap& FileMap::operator=(FileMap&& other) noexcept {
     mFileName = other.mFileName;
     mBasePtr = other.mBasePtr;
     mBaseLength = other.mBaseLength;
     mDataOffset = other.mDataOffset;
     mDataPtr = other.mDataPtr;
     mDataLength = other.mDataLength;
-    other.mFileName = NULL;
-    other.mBasePtr = NULL;
-    other.mDataPtr = NULL;
+    other.mFileName = nullptr;
+    other.mBasePtr = nullptr;
+    other.mDataPtr = nullptr;
 #if defined(__MINGW32__)
     mFileHandle = other.mFileHandle;
     mFileMapping = other.mFileMapping;
-    other.mFileHandle = 0;
-    other.mFileMapping = 0;
+    other.mFileHandle = INVALID_HANDLE_VALUE;
+    other.mFileMapping = NULL;
 #endif
     return *this;
 }
@@ -93,7 +107,7 @@ FileMap& FileMap::operator=(FileMap&& other) {
 // Destructor.
 FileMap::~FileMap(void)
 {
-    if (mFileName != NULL) {
+    if (mFileName != nullptr) {
         free(mFileName);
     }
 #if defined(__MINGW32__)
@@ -101,7 +115,7 @@ FileMap::~FileMap(void)
         ALOGD("UnmapViewOfFile(%p) failed, error = %lu\n", mBasePtr,
               GetLastError() );
     }
-    if (mFileMapping != INVALID_HANDLE_VALUE) {
+    if (mFileMapping != NULL) {
         CloseHandle(mFileMapping);
     }
 #else
@@ -156,7 +170,7 @@ bool FileMap::create(const char* origFileName, int fd, off64_t offset, size_t le
         ALOGE("MapViewOfFile(%" PRId64 ", %zu) failed with error %lu\n",
               adjOffset, adjLength, GetLastError() );
         CloseHandle(mFileMapping);
-        mFileMapping = INVALID_HANDLE_VALUE;
+        mFileMapping = NULL;
         return false;
     }
 #else // !defined(__MINGW32__)
@@ -188,7 +202,7 @@ bool FileMap::create(const char* origFileName, int fd, off64_t offset, size_t le
     if (!readOnly)
         prot |= PROT_WRITE;
 
-    ptr = mmap(NULL, adjLength, prot, flags, fd, adjOffset);
+    ptr = mmap(nullptr, adjLength, prot, flags, fd, adjOffset);
     if (ptr == MAP_FAILED) {
         ALOGE("mmap(%lld,%zu) failed: %s\n",
             (long long)adjOffset, adjLength, strerror(errno));
@@ -197,7 +211,7 @@ bool FileMap::create(const char* origFileName, int fd, off64_t offset, size_t le
     mBasePtr = ptr;
 #endif // !defined(__MINGW32__)
 
-    mFileName = origFileName != NULL ? strdup(origFileName) : NULL;
+    mFileName = origFileName != nullptr ? strdup(origFileName) : nullptr;
     mBaseLength = adjLength;
     mDataOffset = offset;
     mDataPtr = (char*) mBasePtr + adjust;

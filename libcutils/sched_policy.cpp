@@ -14,6 +14,8 @@
 ** limitations under the License.
 */
 
+#include <cutils/sched_policy.h>
+
 #define LOG_TAG "SchedPolicy"
 
 #include <errno.h>
@@ -23,17 +25,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <android-base/macros.h>
 #include <log/log.h>
-#include <cutils/sched_policy.h>
-
-#define UNUSED __attribute__((__unused__))
-
-#ifndef SLOGE
-#define SLOGE ALOGE
-#endif
-#ifndef SLOGW
-#define SLOGW ALOGW
-#endif
 
 /* Re-map SP_DEFAULT to the system default policy, and leave other values unchanged.
  * Call this any place a SchedPolicy is used as an input parameter.
@@ -65,11 +58,13 @@ static int system_bg_cpuset_fd = -1;
 static int bg_cpuset_fd = -1;
 static int fg_cpuset_fd = -1;
 static int ta_cpuset_fd = -1; // special cpuset for top app
+static int rs_cpuset_fd = -1;  // special cpuset for screen off restrictions
 
 // File descriptors open to /dev/stune/../tasks, setup by initialize, or -1 on error
 static int bg_schedboost_fd = -1;
 static int fg_schedboost_fd = -1;
 static int ta_schedboost_fd = -1;
+static int rt_schedboost_fd = -1;
 
 /* Add tid to the scheduling group defined by the policy */
 static int add_tid_to_cgroup(int tid, int fd)
@@ -123,11 +118,8 @@ static int add_tid_to_cgroup(int tid, int fd)
     on where init.rc mounts cpuset. That's why we'd better require this
     configuration be set if CONFIG_CPUSETS is set.
 
-    With runtime check using the following function, build time
-    variables like ENABLE_CPUSETS (used in Android.mk) or cpusets (used
-    in Android.bp) are not needed.
+    In older releases, this was controlled by build-time configuration.
  */
-
 bool cpusets_enabled() {
     static bool enabled = (access("/dev/cpuset/tasks", F_OK) == 0);
 
@@ -136,15 +128,11 @@ bool cpusets_enabled() {
 
 /*
     Similar to CONFIG_CPUSETS above, but with a different configuration
-    CONFIG_SCHEDTUNE that's in Android common Linux kernel and Linaro
+    CONFIG_CGROUP_SCHEDTUNE that's in Android common Linux kernel and Linaro
     Stable Kernel (LSK), but not in mainline Linux as of v4.9.
 
-    With runtime check using the following function, build time
-    variables like ENABLE_SCHEDBOOST (used in Android.mk) or schedboost
-    (used in Android.bp) are not needed.
-
+    In older releases, this was controlled by build-time configuration.
  */
-
 bool schedboost_enabled() {
     static bool enabled = (access("/dev/stune/tasks", F_OK) == 0);
 
@@ -165,6 +153,8 @@ static void __initialize() {
             system_bg_cpuset_fd = open(filename, O_WRONLY | O_CLOEXEC);
             filename = "/dev/cpuset/top-app/tasks";
             ta_cpuset_fd = open(filename, O_WRONLY | O_CLOEXEC);
+            filename = "/dev/cpuset/restricted/tasks";
+            rs_cpuset_fd = open(filename, O_WRONLY | O_CLOEXEC);
 
             if (schedboost_enabled()) {
                 filename = "/dev/stune/top-app/tasks";
@@ -173,6 +163,8 @@ static void __initialize() {
                 fg_schedboost_fd = open(filename, O_WRONLY | O_CLOEXEC);
                 filename = "/dev/stune/background/tasks";
                 bg_schedboost_fd = open(filename, O_WRONLY | O_CLOEXEC);
+                filename = "/dev/stune/rt/tasks";
+                rt_schedboost_fd = open(filename, O_WRONLY | O_CLOEXEC);
             }
         }
     }
@@ -263,24 +255,26 @@ int get_sched_policy(int tid, SchedPolicy *policy)
 
     char grpBuf[32];
 
-    if (cpusets_enabled()) {
+    grpBuf[0] = '\0';
+    if (schedboost_enabled()) {
+        if (getCGroupSubsys(tid, "schedtune", grpBuf, sizeof(grpBuf)) < 0) return -1;
+    }
+    if ((grpBuf[0] == '\0') && cpusets_enabled()) {
         if (getCGroupSubsys(tid, "cpuset", grpBuf, sizeof(grpBuf)) < 0) return -1;
-        if (grpBuf[0] == '\0') {
-            *policy = SP_FOREGROUND;
-        } else if (!strcmp(grpBuf, "foreground")) {
-            *policy = SP_FOREGROUND;
-        } else if (!strcmp(grpBuf, "background")) {
-            *policy = SP_BACKGROUND;
-        } else if (!strcmp(grpBuf, "top-app")) {
-            *policy = SP_TOP_APP;
-        } else {
-            errno = ERANGE;
-            return -1;
-        }
-    } else {
-        // In b/34193533, we removed bg_non_interactive cgroup, so now
-        // all threads are in FOREGROUND cgroup
+    }
+    if (grpBuf[0] == '\0') {
         *policy = SP_FOREGROUND;
+    } else if (!strcmp(grpBuf, "foreground")) {
+        *policy = SP_FOREGROUND;
+    } else if (!strcmp(grpBuf, "system-background")) {
+        *policy = SP_SYSTEM;
+    } else if (!strcmp(grpBuf, "background")) {
+        *policy = SP_BACKGROUND;
+    } else if (!strcmp(grpBuf, "top-app")) {
+        *policy = SP_TOP_APP;
+    } else {
+        errno = ERANGE;
+        return -1;
     }
     return 0;
 }
@@ -318,6 +312,9 @@ int set_cpuset_policy(int tid, SchedPolicy policy)
     case SP_SYSTEM:
         fd = system_bg_cpuset_fd;
         break;
+    case SP_RESTRICTED:
+        fd = rs_cpuset_fd;
+        break;
     default:
         boost_fd = fd = -1;
         break;
@@ -338,19 +335,28 @@ int set_cpuset_policy(int tid, SchedPolicy policy)
     return 0;
 }
 
-static void set_timerslack_ns(int tid, unsigned long long slack) {
+static void set_timerslack_ns(int tid, unsigned long slack) {
     // v4.6+ kernels support the /proc/<tid>/timerslack_ns interface.
     // TODO: once we've backported this, log if the open(2) fails.
-    char buf[64];
-    snprintf(buf, sizeof(buf), "/proc/%d/timerslack_ns", tid);
-    int fd = open(buf, O_WRONLY | O_CLOEXEC);
-    if (fd != -1) {
-        int len = snprintf(buf, sizeof(buf), "%llu", slack);
-        if (write(fd, buf, len) != len) {
-            SLOGE("set_timerslack_ns write failed: %s\n", strerror(errno));
+    if (__sys_supports_timerslack) {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "/proc/%d/timerslack_ns", tid);
+        int fd = open(buf, O_WRONLY | O_CLOEXEC);
+        if (fd != -1) {
+            int len = snprintf(buf, sizeof(buf), "%lu", slack);
+            if (write(fd, buf, len) != len) {
+                SLOGE("set_timerslack_ns write failed: %s\n", strerror(errno));
+            }
+            close(fd);
+            return;
         }
-        close(fd);
-        return;
+    }
+
+    // TODO: Remove when /proc/<tid>/timerslack_ns interface is backported.
+    if ((tid == 0) || (tid == gettid())) {
+        if (prctl(PR_SET_TIMERSLACK, slack) == -1) {
+            SLOGE("set_timerslack_ns prctl failed: %s\n", strerror(errno));
+        }
     }
 }
 
@@ -397,6 +403,9 @@ int set_sched_policy(int tid, SchedPolicy policy)
     case SP_SYSTEM:
         SLOGD("/// tid %d (%s)", tid, thread_name);
         break;
+    case SP_RT_APP:
+	SLOGD("RT  tid %d (%s)", tid, thread_name);
+	break;
     default:
         SLOGD("??? tid %d (%s)", tid, thread_name);
         break;
@@ -417,6 +426,9 @@ int set_sched_policy(int tid, SchedPolicy policy)
         case SP_TOP_APP:
             boost_fd = ta_schedboost_fd;
             break;
+        case SP_RT_APP:
+	    boost_fd = rt_schedboost_fd;
+	    break;
         default:
             boost_fd = -1;
             break;
@@ -429,10 +441,7 @@ int set_sched_policy(int tid, SchedPolicy policy)
 
     }
 
-    if (__sys_supports_timerslack) {
-        set_timerslack_ns(tid, policy == SP_BACKGROUND ?
-                               TIMER_SLACK_BG : TIMER_SLACK_FG);
-    }
+    set_timerslack_ns(tid, policy == SP_BACKGROUND ? TIMER_SLACK_BG : TIMER_SLACK_FG);
 
     return 0;
 }
@@ -441,32 +450,27 @@ int set_sched_policy(int tid, SchedPolicy policy)
 
 /* Stubs for non-Android targets. */
 
-int set_sched_policy(int tid UNUSED, SchedPolicy policy UNUSED)
-{
+int set_sched_policy(int /*tid*/, SchedPolicy /*policy*/) {
     return 0;
 }
 
-int get_sched_policy(int tid UNUSED, SchedPolicy *policy)
-{
+int get_sched_policy(int /*tid*/, SchedPolicy* policy) {
     *policy = SP_SYSTEM_DEFAULT;
     return 0;
 }
 
 #endif
 
-const char *get_sched_policy_name(SchedPolicy policy)
-{
+const char* get_sched_policy_name(SchedPolicy policy) {
     policy = _policy(policy);
-    static const char * const strings[SP_CNT] = {
-       [SP_BACKGROUND] = "bg",
-       [SP_FOREGROUND] = "fg",
-       [SP_SYSTEM]     = "  ",
-       [SP_AUDIO_APP]  = "aa",
-       [SP_AUDIO_SYS]  = "as",
-       [SP_TOP_APP]    = "ta",
+    static const char* const kSchedPolicyNames[] = {
+            [SP_BACKGROUND] = "bg", [SP_FOREGROUND] = "fg", [SP_SYSTEM] = "  ",
+            [SP_AUDIO_APP] = "aa",  [SP_AUDIO_SYS] = "as",  [SP_TOP_APP] = "ta",
+            [SP_RT_APP] = "rt",     [SP_RESTRICTED] = "rs",
     };
-    if ((policy < SP_CNT) && (strings[policy] != NULL))
-        return strings[policy];
-    else
+    static_assert(arraysize(kSchedPolicyNames) == SP_CNT, "missing name");
+    if (policy < SP_BACKGROUND || policy >= SP_CNT) {
         return "error";
+    }
+    return kSchedPolicyNames[policy];
 }
