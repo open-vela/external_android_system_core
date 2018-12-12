@@ -23,13 +23,10 @@
 extern "C" {
 #endif
 
-#define NATIVE_HANDLE_MAX_FDS 1024
-#define NATIVE_HANDLE_MAX_INTS 1024
-
 /* Declare a char array for use with native_handle_init */
 #define NATIVE_HANDLE_DECLARE_STORAGE(name, maxFds, maxInts) \
-    alignas(native_handle_t) char name[                            \
-      sizeof(native_handle_t) + sizeof(int) * (maxFds + maxInts)]
+    alignas(native_handle_t) char (name)[                            \
+      sizeof(native_handle_t) + sizeof(int) * ((maxFds) + (maxInts))]
 
 typedef struct native_handle
 {
@@ -45,6 +42,8 @@ typedef struct native_handle
 #pragma clang diagnostic pop
 #endif
 } native_handle_t;
+
+typedef const native_handle_t* buffer_handle_t;
 
 /*
  * native_handle_close
