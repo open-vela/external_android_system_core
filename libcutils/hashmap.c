@@ -15,12 +15,12 @@
  */
 
 #include <cutils/hashmap.h>
-
 #include <assert.h>
 #include <errno.h>
-#include <pthread.h>
+#include <cutils/threads.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <sys/types.h>
 
 typedef struct Entry Entry;
@@ -36,7 +36,7 @@ struct Hashmap {
     size_t bucketCount;
     int (*hash)(void* key);
     bool (*equals)(void* keyA, void* keyB);
-    pthread_mutex_t lock;
+    mutex_t lock; 
     size_t size;
 };
 
@@ -44,33 +44,33 @@ Hashmap* hashmapCreate(size_t initialCapacity,
         int (*hash)(void* key), bool (*equals)(void* keyA, void* keyB)) {
     assert(hash != NULL);
     assert(equals != NULL);
-
-    Hashmap* map = static_cast<Hashmap*>(malloc(sizeof(Hashmap)));
+    
+    Hashmap* map = malloc(sizeof(Hashmap));
     if (map == NULL) {
         return NULL;
     }
-
+    
     // 0.75 load factor.
     size_t minimumBucketCount = initialCapacity * 4 / 3;
     map->bucketCount = 1;
     while (map->bucketCount <= minimumBucketCount) {
         // Bucket count must be power of 2.
-        map->bucketCount <<= 1;
+        map->bucketCount <<= 1; 
     }
 
-    map->buckets = static_cast<Entry**>(calloc(map->bucketCount, sizeof(Entry*)));
+    map->buckets = calloc(map->bucketCount, sizeof(Entry*));
     if (map->buckets == NULL) {
         free(map);
         return NULL;
     }
-
+    
     map->size = 0;
 
     map->hash = hash;
     map->equals = equals;
-
-    pthread_mutex_init(&map->lock, nullptr);
-
+    
+    mutex_init(&map->lock);
+    
     return map;
 }
 
@@ -89,8 +89,12 @@ static inline int hashKey(Hashmap* map, void* key) {
     h ^= (((unsigned int) h) >> 14);
     h += (h << 4);
     h ^= (((unsigned int) h) >> 10);
-
+       
     return h;
+}
+
+size_t hashmapSize(Hashmap* map) {
+    return map->size;
 }
 
 static inline size_t calculateIndex(size_t bucketCount, int hash) {
@@ -102,12 +106,12 @@ static void expandIfNecessary(Hashmap* map) {
     if (map->size > (map->bucketCount * 3 / 4)) {
         // Start off with a 0.33 load factor.
         size_t newBucketCount = map->bucketCount << 1;
-        Entry** newBuckets = static_cast<Entry**>(calloc(newBucketCount, sizeof(Entry*)));
+        Entry** newBuckets = calloc(newBucketCount, sizeof(Entry*));
         if (newBuckets == NULL) {
             // Abort expansion.
             return;
         }
-
+        
         // Move over existing entries.
         size_t i;
         for (i = 0; i < map->bucketCount; i++) {
@@ -129,11 +133,11 @@ static void expandIfNecessary(Hashmap* map) {
 }
 
 void hashmapLock(Hashmap* map) {
-    pthread_mutex_lock(&map->lock);
+    mutex_lock(&map->lock);
 }
 
 void hashmapUnlock(Hashmap* map) {
-    pthread_mutex_unlock(&map->lock);
+    mutex_unlock(&map->lock);
 }
 
 void hashmapFree(Hashmap* map) {
@@ -147,7 +151,7 @@ void hashmapFree(Hashmap* map) {
         }
     }
     free(map->buckets);
-    pthread_mutex_destroy(&map->lock);
+    mutex_destroy(&map->lock);
     free(map);
 }
 
@@ -167,7 +171,7 @@ int hashmapHash(void* key, size_t keySize) {
 }
 
 static Entry* createEntry(void* key, int hash, void* value) {
-    Entry* entry = static_cast<Entry*>(malloc(sizeof(Entry)));
+    Entry* entry = malloc(sizeof(Entry));
     if (entry == NULL) {
         return NULL;
     }
@@ -236,6 +240,54 @@ void* hashmapGet(Hashmap* map, void* key) {
     return NULL;
 }
 
+bool hashmapContainsKey(Hashmap* map, void* key) {
+    int hash = hashKey(map, key);
+    size_t index = calculateIndex(map->bucketCount, hash);
+
+    Entry* entry = map->buckets[index];
+    while (entry != NULL) {
+        if (equalKeys(entry->key, entry->hash, key, hash, map->equals)) {
+            return true;
+        }
+        entry = entry->next;
+    }
+
+    return false;
+}
+
+void* hashmapMemoize(Hashmap* map, void* key, 
+        void* (*initialValue)(void* key, void* context), void* context) {
+    int hash = hashKey(map, key);
+    size_t index = calculateIndex(map->bucketCount, hash);
+
+    Entry** p = &(map->buckets[index]);
+    while (true) {
+        Entry* current = *p;
+
+        // Add a new entry.
+        if (current == NULL) {
+            *p = createEntry(key, hash, NULL);
+            if (*p == NULL) {
+                errno = ENOMEM;
+                return NULL;
+            }
+            void* value = initialValue(key, context);
+            (*p)->value = value;
+            map->size++;
+            expandIfNecessary(map);
+            return value;
+        }
+
+        // Return existing value.
+        if (equalKeys(current->key, current->hash, key, hash, map->equals)) {
+            return current->value;
+        }
+
+        // Move to next entry.
+        p = &current->next;
+    }
+}
+
 void* hashmapRemove(Hashmap* map, void* key) {
     int hash = hashKey(map, key);
     size_t index = calculateIndex(map->bucketCount, hash);
@@ -258,8 +310,9 @@ void* hashmapRemove(Hashmap* map, void* key) {
     return NULL;
 }
 
-void hashmapForEach(Hashmap* map, bool (*callback)(void* key, void* value, void* context),
-                    void* context) {
+void hashmapForEach(Hashmap* map, 
+        bool (*callback)(void* key, void* value, void* context),
+        void* context) {
     size_t i;
     for (i = 0; i < map->bucketCount; i++) {
         Entry* entry = map->buckets[i];
@@ -271,4 +324,35 @@ void hashmapForEach(Hashmap* map, bool (*callback)(void* key, void* value, void*
             entry = next;
         }
     }
+}
+
+size_t hashmapCurrentCapacity(Hashmap* map) {
+    size_t bucketCount = map->bucketCount;
+    return bucketCount * 3 / 4;
+}
+
+size_t hashmapCountCollisions(Hashmap* map) {
+    size_t collisions = 0;
+    size_t i;
+    for (i = 0; i < map->bucketCount; i++) {
+        Entry* entry = map->buckets[i];
+        while (entry != NULL) {
+            if (entry->next != NULL) {
+                collisions++;
+            }
+            entry = entry->next;
+        }
+    }
+    return collisions;
+}
+
+int hashmapIntHash(void* key) {
+    // Return the key value itself.
+    return *((int*) key);
+}
+
+bool hashmapIntEquals(void* keyA, void* keyB) {
+    int a = *((int*) keyA);
+    int b = *((int*) keyB);
+    return a == b;
 }

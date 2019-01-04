@@ -23,7 +23,6 @@ cc_test {
     srcs: [
         "BitSet_test.cpp",
         "LruCache_test.cpp",
-        "Mutex_test.cpp",
         "Singleton_test.cpp",
         "String8_test.cpp",
         "StrongPointer_test.cpp",
@@ -34,6 +33,8 @@ cc_test {
     target: {
         android: {
             srcs: [
+                "Looper_test.cpp",
+                "RefBase_test.cpp",
                 "SystemClock_test.cpp",
             ],
             shared_libs: [
@@ -42,6 +43,7 @@ cc_test {
                 "libcutils",
                 "libutils",
                 "libbase",
+                "libdl",
             ],
         },
         linux: {
@@ -56,6 +58,7 @@ cc_test {
                 "liblog",
                 "libbase",
             ],
+            host_ldlibs: ["-ldl"],
         },
     },
 
@@ -68,7 +71,6 @@ cc_test {
         "-Wall",
         "-Wextra",
         "-Werror",
-        "-Wthread-safety",
     ],
 }
 
@@ -77,10 +79,6 @@ cc_test_library {
     host_supported: true,
     relative_install_path: "libutils_tests",
     srcs: ["Singleton_test1.cpp"],
-    cflags: [
-        "-Wall",
-        "-Werror",
-    ],
 }
 
 cc_test_library {
@@ -88,9 +86,5 @@ cc_test_library {
     host_supported: true,
     relative_install_path: "libutils_tests",
     srcs: ["Singleton_test2.cpp"],
-    cflags: [
-        "-Wall",
-        "-Werror",
-    ],
     shared_libs: ["libutils_tests_singleton1"],
 }

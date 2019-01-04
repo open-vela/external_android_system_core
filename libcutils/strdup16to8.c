@@ -15,10 +15,10 @@
 ** limitations under the License.
 */
 
-#include <cutils/jstring.h>
-
-#include <assert.h>
 #include <limits.h>  /* for SIZE_MAX */
+
+#include <cutils/jstring.h>
+#include <assert.h>
 #include <stdlib.h>
 
 
@@ -145,11 +145,14 @@ extern char* strncpy16to8(char* utf8Str, const char16_t* utf16Str, size_t len)
  */
 char * strndup16to8 (const char16_t* s, size_t n)
 {
+    char*   ret;
+    size_t  len;
+
     if (s == NULL) {
         return NULL;
     }
 
-    size_t len = strnlen16to8(s, n);
+    len = strnlen16to8(s, n);
 
     /* We are paranoid, and we check for SIZE_MAX-1
      * too since it is an overflow value for our
@@ -158,7 +161,7 @@ char * strndup16to8 (const char16_t* s, size_t n)
     if (len >= SIZE_MAX-1)
         return NULL;
 
-    char* ret = static_cast<char*>(malloc(len + 1));
+    ret = malloc(len + 1);
     if (ret == NULL)
         return NULL;
 

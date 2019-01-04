@@ -22,8 +22,6 @@
 
 /*
  * Contains some bit manipulation helpers.
- *
- * DO NOT USE: std::bitset<32> or std::bitset<64> preferred
  */
 
 namespace android {

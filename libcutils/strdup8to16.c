@@ -16,10 +16,9 @@
 */
 
 #include <cutils/jstring.h>
-
 #include <assert.h>
-#include <limits.h>
 #include <stdlib.h>
+#include <limits.h>
 
 /* See http://www.unicode.org/reports/tr22/ for discussion
  * on invalid sequences
@@ -117,7 +116,7 @@ static inline uint32_t getUtf32FromUtf8(const char** pUtf8Ptr)
     int i;
 
     /* Mask for leader byte for lengths 1, 2, 3, and 4 respectively*/
-    static const unsigned char leaderMask[4] = {0xff, 0x1f, 0x0f, 0x07};
+    static const char leaderMask[4] = {0xff, 0x1f, 0x0f, 0x07};
 
     /* Bytes that start with bits "10" are not leading characters. */
     if (((**pUtf8Ptr) & 0xc0) == 0x80) {

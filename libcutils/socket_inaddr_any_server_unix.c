@@ -14,8 +14,6 @@
 ** limitations under the License.
 */
 
-#include <cutils/sockets.h>
-
 #include <errno.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -26,6 +24,8 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+
+#include <cutils/sockets.h>
 
 #define LISTEN_BACKLOG 4
 
