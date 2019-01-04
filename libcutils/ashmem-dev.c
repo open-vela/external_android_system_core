@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include <cutils/ashmem.h>
-
 /*
  * Implementation of the user-space ashmem API for devices, which have our
  * ashmem-enabled kernel. See ashmem-sim.c for the "fake" tmp-based version,
@@ -33,6 +31,8 @@
 #include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <cutils/ashmem.h>
 #include <log/log.h>
 
 #define ASHMEM_DEVICE "/dev/ashmem"
@@ -51,7 +51,7 @@ static int __ashmem_open_locked()
     int ret;
     struct stat st;
 
-    int fd = TEMP_FAILURE_RETRY(open(ASHMEM_DEVICE, O_RDWR | O_CLOEXEC));
+    int fd = TEMP_FAILURE_RETRY(open(ASHMEM_DEVICE, O_RDWR));
     if (fd < 0) {
         return fd;
     }
@@ -90,7 +90,7 @@ static int __ashmem_is_ashmem(int fd, int fatal)
     dev_t rdev;
     struct stat st;
 
-    if (fstat(fd, &st) < 0) {
+    if (TEMP_FAILURE_RETRY(fstat(fd, &st)) < 0) {
         return -1;
     }
 
@@ -133,12 +133,6 @@ static int __ashmem_is_ashmem(int fd, int fatal)
 
     errno = ENOTTY;
     return -1;
-}
-
-static int __ashmem_check_failure(int fd, int result)
-{
-    if (result == -1 && errno == ENOTTY) __ashmem_is_ashmem(fd, 1);
-    return result;
 }
 
 int ashmem_valid(int fd)
@@ -188,26 +182,44 @@ error:
 
 int ashmem_set_prot_region(int fd, int prot)
 {
-    return __ashmem_check_failure(fd, TEMP_FAILURE_RETRY(ioctl(fd, ASHMEM_SET_PROT_MASK, prot)));
+    int ret = __ashmem_is_ashmem(fd, 1);
+    if (ret < 0) {
+        return ret;
+    }
+
+    return TEMP_FAILURE_RETRY(ioctl(fd, ASHMEM_SET_PROT_MASK, prot));
 }
 
 int ashmem_pin_region(int fd, size_t offset, size_t len)
 {
-    // TODO: should LP64 reject too-large offset/len?
-    ashmem_pin pin = { static_cast<uint32_t>(offset), static_cast<uint32_t>(len) };
+    struct ashmem_pin pin = { offset, len };
 
-    return __ashmem_check_failure(fd, TEMP_FAILURE_RETRY(ioctl(fd, ASHMEM_PIN, &pin)));
+    int ret = __ashmem_is_ashmem(fd, 1);
+    if (ret < 0) {
+        return ret;
+    }
+
+    return TEMP_FAILURE_RETRY(ioctl(fd, ASHMEM_PIN, &pin));
 }
 
 int ashmem_unpin_region(int fd, size_t offset, size_t len)
 {
-    // TODO: should LP64 reject too-large offset/len?
-    ashmem_pin pin = { static_cast<uint32_t>(offset), static_cast<uint32_t>(len) };
+    struct ashmem_pin pin = { offset, len };
 
-    return __ashmem_check_failure(fd, TEMP_FAILURE_RETRY(ioctl(fd, ASHMEM_UNPIN, &pin)));
+    int ret = __ashmem_is_ashmem(fd, 1);
+    if (ret < 0) {
+        return ret;
+    }
+
+    return TEMP_FAILURE_RETRY(ioctl(fd, ASHMEM_UNPIN, &pin));
 }
 
 int ashmem_get_size_region(int fd)
 {
-    return __ashmem_check_failure(fd, TEMP_FAILURE_RETRY(ioctl(fd, ASHMEM_GET_SIZE, NULL)));
+    int ret = __ashmem_is_ashmem(fd, 1);
+    if (ret < 0) {
+        return ret;
+    }
+
+    return TEMP_FAILURE_RETRY(ioctl(fd, ASHMEM_GET_SIZE, NULL));
 }

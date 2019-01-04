@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2012 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-#ifndef __TRACE_DEV_INC
-#define __TRACE_DEV_INC
-
 #define LOG_TAG "cutils-trace"
 
 #include <errno.h>
@@ -24,6 +21,7 @@
 #include <limits.h>
 #include <pthread.h>
 #include <stdatomic.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -46,6 +44,7 @@ int                     atrace_marker_fd     = -1;
 uint64_t                atrace_enabled_tags  = ATRACE_TAG_NOT_READY;
 static bool             atrace_is_debuggable = false;
 static atomic_bool      atrace_is_enabled    = ATOMIC_VAR_INIT(true);
+static pthread_once_t   atrace_once_control  = PTHREAD_ONCE_INIT;
 static pthread_mutex_t  atrace_tags_mutex    = PTHREAD_MUTEX_INITIALIZER;
 
 // Set whether this process is debuggable, which determines whether
@@ -54,6 +53,14 @@ static pthread_mutex_t  atrace_tags_mutex    = PTHREAD_MUTEX_INITIALIZER;
 void atrace_set_debuggable(bool debuggable)
 {
     atrace_is_debuggable = debuggable;
+    atrace_update_tags();
+}
+
+// Set whether tracing is enabled in this process.  This is used to prevent
+// the Zygote process from tracing.
+void atrace_set_tracing_enabled(bool enabled)
+{
+    atomic_store_explicit(&atrace_is_enabled, enabled, memory_order_release);
     atrace_update_tags();
 }
 
@@ -69,7 +76,7 @@ static bool atrace_is_cmdline_match(const char* cmdline)
     for (int i = 0; i < count; i++) {
         snprintf(buf, sizeof(buf), "debug.atrace.app_%d", i);
         property_get(buf, value, "");
-        if (strcmp(value, "*") == 0 || strcmp(value, cmdline) == 0) {
+        if (strcmp(value, cmdline) == 0) {
             return true;
         }
     }
@@ -152,9 +159,46 @@ void atrace_update_tags()
     }
 }
 
-#define WRITE_MSG(format_begin, format_end, name, value) { \
+static void atrace_init_once()
+{
+    atrace_marker_fd = open("/sys/kernel/debug/tracing/trace_marker", O_WRONLY | O_CLOEXEC);
+    if (atrace_marker_fd == -1) {
+        ALOGE("Error opening trace file: %s (%d)", strerror(errno), errno);
+        atrace_enabled_tags = 0;
+        goto done;
+    }
+
+    atrace_enabled_tags = atrace_get_property();
+
+done:
+    atomic_store_explicit(&atrace_is_ready, true, memory_order_release);
+}
+
+void atrace_setup()
+{
+    pthread_once(&atrace_once_control, atrace_init_once);
+}
+
+void atrace_begin_body(const char* name)
+{
+    char buf[ATRACE_MESSAGE_LENGTH];
+
+    int len = snprintf(buf, sizeof(buf), "B|%d|%s", getpid(), name);
+    if (len >= (int) sizeof(buf)) {
+        ALOGW("Truncated name in %s: %s\n", __FUNCTION__, name);
+        len = sizeof(buf) - 1;
+    }
+    write(atrace_marker_fd, buf, len);
+}
+
+void atrace_end_body()
+{
+    char c = 'E';
+    write(atrace_marker_fd, &c, 1);
+}
+
+#define WRITE_MSG(format_begin, format_end, pid, name, value) { \
     char buf[ATRACE_MESSAGE_LENGTH]; \
-    int pid = getpid(); \
     int len = snprintf(buf, sizeof(buf), format_begin "%s" format_end, pid, \
         name, value); \
     if (len >= (int) sizeof(buf)) { \
@@ -169,4 +213,22 @@ void atrace_update_tags()
     write(atrace_marker_fd, buf, len); \
 }
 
-#endif  // __TRACE_DEV_INC
+void atrace_async_begin_body(const char* name, int32_t cookie)
+{
+    WRITE_MSG("S|%d|", "|%" PRId32, getpid(), name, cookie);
+}
+
+void atrace_async_end_body(const char* name, int32_t cookie)
+{
+    WRITE_MSG("F|%d|", "|%" PRId32, getpid(), name, cookie);
+}
+
+void atrace_int_body(const char* name, int32_t value)
+{
+    WRITE_MSG("C|%d|", "|%" PRId32, getpid(), name, value);
+}
+
+void atrace_int64_body(const char* name, int64_t value)
+{
+    WRITE_MSG("C|%d|", "|%" PRId64, getpid(), name, value);
+}

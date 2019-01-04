@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include <cutils/partition_utils.h>
-
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mount.h> /* for BLKGETSIZE */
@@ -25,7 +23,7 @@
 
 #include <cutils/properties.h>
 
-static int only_one_char(uint8_t *buf, int len, uint8_t c)
+static int only_one_char(char *buf, int len, char c)
 {
     int i, ret;
 
@@ -39,8 +37,9 @@ static int only_one_char(uint8_t *buf, int len, uint8_t c)
     return ret;
 }
 
-int partition_wiped(const char* source) {
-    uint8_t buf[4096];
+int partition_wiped(char *source)
+{
+    char buf[4096];
     int fd, ret;
 
     if ((fd = open(source, O_RDONLY)) < 0) {
@@ -66,3 +65,4 @@ int partition_wiped(const char* source) {
 
     return 0;
 }
+

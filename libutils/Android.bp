@@ -15,18 +15,17 @@
 cc_library_headers {
     name: "libutils_headers",
     vendor_available: true,
-    recovery_available: true,
     host_supported: true,
 
     header_libs: [
         "liblog_headers",
         "libsystem_headers",
-        "libcutils_headers",
+        "libcutils_headers"
     ],
     export_header_lib_headers: [
         "liblog_headers",
         "libsystem_headers",
-        "libcutils_headers",
+        "libcutils_headers"
     ],
     export_include_dirs: ["include"],
 
@@ -44,22 +43,41 @@ cc_library_headers {
     },
 }
 
-cc_defaults {
-    name: "libutils_defaults",
+cc_library {
+    name: "libutils",
     vendor_available: true,
-    recovery_available: true,
     vndk: {
         enabled: true,
         support_system_process: true,
     },
     host_supported: true,
 
-    cflags: [
-        "-Wall",
-        "-Werror",
+    srcs: [
+        "CallStack.cpp",
+        "FileMap.cpp",
+        "JenkinsHash.cpp",
+        "NativeHandle.cpp",
+        "Printer.cpp",
+        "PropertyMap.cpp",
+        "RefBase.cpp",
+        "SharedBuffer.cpp",
+        "Static.cpp",
+        "StopWatch.cpp",
+        "String8.cpp",
+        "String16.cpp",
+        "StrongPointer.cpp",
+        "SystemClock.cpp",
+        "Threads.cpp",
+        "Timers.cpp",
+        "Tokenizer.cpp",
+        "Unicode.cpp",
+        "VectorImpl.cpp",
+        "misc.cpp",
     ],
+
+    cflags: ["-Werror"],
+    include_dirs: ["external/safe-iop/include"],
     header_libs: [
-        "libbase_headers",
         "libutils_headers",
     ],
     export_header_lib_headers: [
@@ -78,9 +96,16 @@ cc_defaults {
 
     target: {
         android: {
+            srcs: [
+                "Looper.cpp",
+                "ProcessCallStack.cpp",
+                "Trace.cpp",
+            ],
+
             cflags: ["-fvisibility=protected"],
 
             shared_libs: [
+                "libbacktrace",
                 "libcutils",
                 "libdl",
                 "libvndksupport",
@@ -91,10 +116,6 @@ cc_defaults {
             },
         },
 
-        recovery: {
-            exclude_shared_libs: ["libvndksupport"],
-        },
-
         host: {
             cflags: ["-DLIBUTILS_NATIVE=1"],
 
@@ -103,93 +124,33 @@ cc_defaults {
             },
         },
 
+        linux: {
+            srcs: [
+                "Looper.cpp",
+                "ProcessCallStack.cpp",
+            ],
+        },
         linux_bionic: {
             enabled: true,
+            srcs: [
+                "Looper.cpp",
+                "ProcessCallStack.cpp",
+            ],
         },
 
         darwin: {
             cflags: ["-Wno-unused-parameter"],
         },
 
+        // Under MinGW, ctype.h doesn't need multi-byte support
         windows: {
-            cflags: [
-                // Under MinGW, ctype.h doesn't need multi-byte support
-                "-DMB_CUR_MAX=1",
-                "-Wno-unused-private-field",
-            ],
+            cflags: ["-DMB_CUR_MAX=1"],
 
             enabled: true,
         },
     },
-}
 
-cc_library {
-    name: "libutils",
-    defaults: ["libutils_defaults"],
-
-    srcs: [
-        "FileMap.cpp",
-        "JenkinsHash.cpp",
-        "NativeHandle.cpp",
-        "Printer.cpp",
-        "PropertyMap.cpp",
-        "RefBase.cpp",
-        "SharedBuffer.cpp",
-        "StopWatch.cpp",
-        "String8.cpp",
-        "String16.cpp",
-        "StrongPointer.cpp",
-        "SystemClock.cpp",
-        "Threads.cpp",
-        "Timers.cpp",
-        "Tokenizer.cpp",
-        "Unicode.cpp",
-        "VectorImpl.cpp",
-        "misc.cpp",
-    ],
-
-    target: {
-        android: {
-            srcs: [
-                "Trace.cpp",
-            ],
-        },
-        linux: {
-            shared_libs: ["libbase"],
-            srcs: [
-                "Looper.cpp",
-            ],
-        },
-    },
-}
-
-cc_library {
-    name: "libutilscallstack",
-    defaults: ["libutils_defaults"],
-
-    srcs: [
-        "CallStack.cpp",
-    ],
-
-    arch: {
-        mips: {
-            cflags: ["-DALIGN_DOUBLE"],
-        },
-    },
-
-    target: {
-        android: {
-            shared_libs: [
-                "libutils",
-                "libbacktrace",
-            ],
-        },
-        linux: {
-            srcs: [
-                "ProcessCallStack.cpp",
-            ],
-        },
-    },
+    clang: true,
 }
 
 // Include subdirectory makefiles
@@ -201,8 +162,6 @@ cc_test {
     static_libs: ["libutils"],
     shared_libs: ["liblog"],
     srcs: ["SharedBufferTest.cpp"],
-    cflags: [
-        "-Wall",
-        "-Werror",
-    ],
 }
+
+subdirs = ["tests"]
