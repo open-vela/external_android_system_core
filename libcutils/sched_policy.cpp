@@ -28,13 +28,6 @@
 
 #define UNUSED __attribute__((__unused__))
 
-#ifndef SLOGE
-#define SLOGE ALOGE
-#endif
-#ifndef SLOGW
-#define SLOGW ALOGW
-#endif
-
 /* Re-map SP_DEFAULT to the system default policy, and leave other values unchanged.
  * Call this any place a SchedPolicy is used as an input parameter.
  * Returns the possibly re-mapped policy.
@@ -124,11 +117,8 @@ static int add_tid_to_cgroup(int tid, int fd)
     on where init.rc mounts cpuset. That's why we'd better require this
     configuration be set if CONFIG_CPUSETS is set.
 
-    With runtime check using the following function, build time
-    variables like ENABLE_CPUSETS (used in Android.mk) or cpusets (used
-    in Android.bp) are not needed.
+    In older releases, this was controlled by build-time configuration.
  */
-
 bool cpusets_enabled() {
     static bool enabled = (access("/dev/cpuset/tasks", F_OK) == 0);
 
@@ -137,15 +127,11 @@ bool cpusets_enabled() {
 
 /*
     Similar to CONFIG_CPUSETS above, but with a different configuration
-    CONFIG_SCHEDTUNE that's in Android common Linux kernel and Linaro
+    CONFIG_CGROUP_SCHEDTUNE that's in Android common Linux kernel and Linaro
     Stable Kernel (LSK), but not in mainline Linux as of v4.9.
 
-    With runtime check using the following function, build time
-    variables like ENABLE_SCHEDBOOST (used in Android.mk) or schedboost
-    (used in Android.bp) are not needed.
-
+    In older releases, this was controlled by build-time configuration.
  */
-
 bool schedboost_enabled() {
     static bool enabled = (access("/dev/stune/tasks", F_OK) == 0);
 
@@ -343,7 +329,7 @@ int set_cpuset_policy(int tid, SchedPolicy policy)
     return 0;
 }
 
-static void set_timerslack_ns(int tid, unsigned long long slack) {
+static void set_timerslack_ns(int tid, unsigned long slack) {
     // v4.6+ kernels support the /proc/<tid>/timerslack_ns interface.
     // TODO: once we've backported this, log if the open(2) fails.
     if (__sys_supports_timerslack) {
@@ -351,7 +337,7 @@ static void set_timerslack_ns(int tid, unsigned long long slack) {
         snprintf(buf, sizeof(buf), "/proc/%d/timerslack_ns", tid);
         int fd = open(buf, O_WRONLY | O_CLOEXEC);
         if (fd != -1) {
-            int len = snprintf(buf, sizeof(buf), "%llu", slack);
+            int len = snprintf(buf, sizeof(buf), "%lu", slack);
             if (write(fd, buf, len) != len) {
                 SLOGE("set_timerslack_ns write failed: %s\n", strerror(errno));
             }
