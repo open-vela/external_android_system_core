@@ -48,10 +48,10 @@ using namespace android;
 
 // Constructor.  Create an empty object.
 FileMap::FileMap(void)
-    : mFileName(nullptr),
-      mBasePtr(nullptr),
+    : mFileName(NULL),
+      mBasePtr(NULL),
       mBaseLength(0),
-      mDataPtr(nullptr),
+      mDataPtr(NULL),
       mDataLength(0)
 #if defined(__MINGW32__)
       ,
@@ -62,22 +62,16 @@ FileMap::FileMap(void)
 }
 
 // Move Constructor.
-FileMap::FileMap(FileMap&& other) noexcept
-    : mFileName(other.mFileName),
-      mBasePtr(other.mBasePtr),
-      mBaseLength(other.mBaseLength),
-      mDataOffset(other.mDataOffset),
-      mDataPtr(other.mDataPtr),
-      mDataLength(other.mDataLength)
+FileMap::FileMap(FileMap&& other)
+    : mFileName(other.mFileName), mBasePtr(other.mBasePtr), mBaseLength(other.mBaseLength),
+      mDataOffset(other.mDataOffset), mDataPtr(other.mDataPtr), mDataLength(other.mDataLength)
 #if defined(__MINGW32__)
-      ,
-      mFileHandle(other.mFileHandle),
-      mFileMapping(other.mFileMapping)
+      , mFileHandle(other.mFileHandle), mFileMapping(other.mFileMapping)
 #endif
 {
-    other.mFileName = nullptr;
-    other.mBasePtr = nullptr;
-    other.mDataPtr = nullptr;
+    other.mFileName = NULL;
+    other.mBasePtr = NULL;
+    other.mDataPtr = NULL;
 #if defined(__MINGW32__)
     other.mFileHandle = INVALID_HANDLE_VALUE;
     other.mFileMapping = NULL;
@@ -85,16 +79,16 @@ FileMap::FileMap(FileMap&& other) noexcept
 }
 
 // Move assign operator.
-FileMap& FileMap::operator=(FileMap&& other) noexcept {
+FileMap& FileMap::operator=(FileMap&& other) {
     mFileName = other.mFileName;
     mBasePtr = other.mBasePtr;
     mBaseLength = other.mBaseLength;
     mDataOffset = other.mDataOffset;
     mDataPtr = other.mDataPtr;
     mDataLength = other.mDataLength;
-    other.mFileName = nullptr;
-    other.mBasePtr = nullptr;
-    other.mDataPtr = nullptr;
+    other.mFileName = NULL;
+    other.mBasePtr = NULL;
+    other.mDataPtr = NULL;
 #if defined(__MINGW32__)
     mFileHandle = other.mFileHandle;
     mFileMapping = other.mFileMapping;
@@ -107,7 +101,7 @@ FileMap& FileMap::operator=(FileMap&& other) noexcept {
 // Destructor.
 FileMap::~FileMap(void)
 {
-    if (mFileName != nullptr) {
+    if (mFileName != NULL) {
         free(mFileName);
     }
 #if defined(__MINGW32__)
@@ -202,7 +196,7 @@ bool FileMap::create(const char* origFileName, int fd, off64_t offset, size_t le
     if (!readOnly)
         prot |= PROT_WRITE;
 
-    ptr = mmap(nullptr, adjLength, prot, flags, fd, adjOffset);
+    ptr = mmap(NULL, adjLength, prot, flags, fd, adjOffset);
     if (ptr == MAP_FAILED) {
         ALOGE("mmap(%lld,%zu) failed: %s\n",
             (long long)adjOffset, adjLength, strerror(errno));
@@ -211,7 +205,7 @@ bool FileMap::create(const char* origFileName, int fd, off64_t offset, size_t le
     mBasePtr = ptr;
 #endif // !defined(__MINGW32__)
 
-    mFileName = origFileName != nullptr ? strdup(origFileName) : nullptr;
+    mFileName = origFileName != NULL ? strdup(origFileName) : NULL;
     mBaseLength = adjLength;
     mDataOffset = offset;
     mDataPtr = (char*) mBasePtr + adjust;
