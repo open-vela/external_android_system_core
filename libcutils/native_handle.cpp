@@ -22,6 +22,9 @@
 #include <string.h>
 #include <unistd.h>
 
+static const int kMaxNativeFds = 1024;
+static const int kMaxNativeInts = 1024;
+
 native_handle_t* native_handle_init(char* storage, int numFds, int numInts) {
     if ((uintptr_t) storage % alignof(native_handle_t)) {
         errno = EINVAL;
@@ -36,8 +39,7 @@ native_handle_t* native_handle_init(char* storage, int numFds, int numInts) {
 }
 
 native_handle_t* native_handle_create(int numFds, int numInts) {
-    if (numFds < 0 || numInts < 0 || numFds > NATIVE_HANDLE_MAX_FDS ||
-        numInts > NATIVE_HANDLE_MAX_INTS) {
+    if (numFds < 0 || numInts < 0 || numFds > kMaxNativeFds || numInts > kMaxNativeInts) {
         errno = EINVAL;
         return NULL;
     }
