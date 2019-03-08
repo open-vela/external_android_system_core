@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef __CUTILS_SOCKETS_H
+#define __CUTILS_SOCKETS_H
 
 #include <errno.h>
 #include <limits.h>
@@ -140,6 +141,19 @@ ssize_t socket_send_buffers(cutils_socket_t sock,
                             const cutils_socket_buffer_t* buffers,
                             size_t num_buffers);
 
+/*
+ * socket_peer_is_trusted - Takes a socket which is presumed to be a
+ * connected local socket (e.g. AF_LOCAL) and returns whether the peer
+ * (the userid that owns the process on the other end of that socket)
+ * is one of the two trusted userids, root or shell.
+ *
+ * Note: This only works as advertised on the Android OS and always
+ * just returns true when called on other operating systems.
+ */
+extern bool socket_peer_is_trusted(int fd);
+
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* __CUTILS_SOCKETS_H */
