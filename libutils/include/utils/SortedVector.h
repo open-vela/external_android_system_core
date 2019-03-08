@@ -288,7 +288,8 @@ int SortedVector<TYPE>::do_compare(const void* lhs, const void* rhs) const {
     return compare_type( *reinterpret_cast<const TYPE*>(lhs), *reinterpret_cast<const TYPE*>(rhs) );
 }
 
-}  // namespace android
+}; // namespace android
+
 
 // ---------------------------------------------------------------------------
 
