@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2010 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,35 +14,23 @@
  * limitations under the License.
  */
 
-#include <utils/Mutex.h>
+#ifndef __CUTILS_OPEN_MEMSTREAM_H__
+#define __CUTILS_OPEN_MEMSTREAM_H__
 
-#include <gtest/gtest.h>
+#include <stdio.h>
 
-static android::Mutex mLock;
-static int i GUARDED_BY(mLock);
+#if defined(__APPLE__)
 
-void modifyLockedVariable() REQUIRES(mLock) {
-    i = 1;
-}
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-TEST(Mutex, compile) {
-    android::Mutex::Autolock _l(mLock);
-    i = 0;
-    modifyLockedVariable();
-}
+FILE* open_memstream(char** bufp, size_t* sizep);
 
-TEST(Mutex, tryLock) {
-    if (mLock.tryLock() != 0) {
-        return;
-    }
-    mLock.unlock();
-}
-
-#if defined(__ANDROID__)
-TEST(Mutex, timedLock) {
-    if (mLock.timedLock(1) != 0) {
-        return;
-    }
-    mLock.unlock();
+#ifdef __cplusplus
 }
 #endif
+
+#endif /* __APPLE__ */
+
+#endif /*__CUTILS_OPEN_MEMSTREAM_H__*/
