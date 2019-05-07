@@ -425,7 +425,8 @@ UTILS_VECTOR_NO_CFI void Vector<TYPE>::do_move_backward(void* dest, const void* 
     move_backward_type( reinterpret_cast<TYPE*>(dest), reinterpret_cast<const TYPE*>(from), num );
 }
 
-}  // namespace android
+}; // namespace android
+
 
 // ---------------------------------------------------------------------------
 

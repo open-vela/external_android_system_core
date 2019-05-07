@@ -29,9 +29,9 @@ class Functor {
 public:
     Functor() {}
     virtual ~Functor() {}
-    virtual status_t operator()(int /*what*/, void* /*data*/) { return OK; }
+    virtual status_t operator ()(int /*what*/, void* /*data*/) { return NO_ERROR; }
 };
 
-}  // namespace android
+}; // namespace android
 
 #endif // ANDROID_FUNCTOR_H

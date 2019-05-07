@@ -15,20 +15,17 @@
 cc_library_headers {
     name: "libutils_headers",
     vendor_available: true,
-    recovery_available: true,
     host_supported: true,
 
     header_libs: [
         "liblog_headers",
         "libsystem_headers",
         "libcutils_headers",
-        "libprocessgroup_headers",
     ],
     export_header_lib_headers: [
         "liblog_headers",
         "libsystem_headers",
         "libcutils_headers",
-        "libprocessgroup_headers",
     ],
     export_include_dirs: ["include"],
 
@@ -49,7 +46,6 @@ cc_library_headers {
 cc_defaults {
     name: "libutils_defaults",
     vendor_available: true,
-    recovery_available: true,
     vndk: {
         enabled: true,
         support_system_process: true,
@@ -60,8 +56,8 @@ cc_defaults {
         "-Wall",
         "-Werror",
     ],
+    include_dirs: ["external/safe-iop/include"],
     header_libs: [
-        "libbase_headers",
         "libutils_headers",
     ],
     export_header_lib_headers: [
@@ -69,7 +65,6 @@ cc_defaults {
     ],
 
     shared_libs: [
-        "libcutils",
         "liblog",
     ],
 
@@ -84,7 +79,7 @@ cc_defaults {
             cflags: ["-fvisibility=protected"],
 
             shared_libs: [
-                "libprocessgroup",
+                "libcutils",
                 "libdl",
                 "libvndksupport",
             ],
@@ -94,8 +89,12 @@ cc_defaults {
             },
         },
 
-        recovery: {
-            exclude_shared_libs: ["libvndksupport"],
+        host: {
+            cflags: ["-DLIBUTILS_NATIVE=1"],
+
+            shared: {
+                enabled: false,
+            },
         },
 
         linux_bionic: {
@@ -130,6 +129,7 @@ cc_library {
         "PropertyMap.cpp",
         "RefBase.cpp",
         "SharedBuffer.cpp",
+        "Static.cpp",
         "StopWatch.cpp",
         "String8.cpp",
         "String16.cpp",
@@ -150,7 +150,6 @@ cc_library {
             ],
         },
         linux: {
-            header_libs: ["libbase_headers"],
             srcs: [
                 "Looper.cpp",
             ],
@@ -172,118 +171,32 @@ cc_library {
         },
     },
 
-    shared_libs: [
-         "libutils",
-         "libbacktrace",
-    ],
-
     target: {
+        android: {
+            shared_libs: [
+                "libutils",
+                "libbacktrace",
+            ],
+        },
         linux: {
             srcs: [
                 "ProcessCallStack.cpp",
             ],
         },
-        darwin: {
-            enabled: false,
-        },
-        windows: {
-            enabled: false,
-        },
     },
 }
 
-cc_test {
-    name: "libutils_test",
-    host_supported: true,
-
-    srcs: [
-        "BitSet_test.cpp",
-        "FileMap_test.cpp",
-        "LruCache_test.cpp",
-        "Mutex_test.cpp",
-        "SharedBuffer_test.cpp",
-        "String8_test.cpp",
-        "StrongPointer_test.cpp",
-        "Unicode_test.cpp",
-        "Vector_test.cpp",
-    ],
-
-    target: {
-        android: {
-            srcs: [
-                "SystemClock_test.cpp",
-            ],
-            shared_libs: [
-                "libz",
-                "liblog",
-                "libcutils",
-                "libutils",
-                "libbase",
-            ],
-        },
-        linux: {
-            srcs: [
-                "Looper_test.cpp",
-                "RefBase_test.cpp",
-            ],
-        },
-        host: {
-            static_libs: [
-                "libutils",
-                "liblog",
-                "libbase",
-            ],
-        },
-    },
-
-    cflags: [
-        "-Wall",
-        "-Wextra",
-        "-Werror",
-        "-Wthread-safety",
-    ],
-
-    test_suites: ["device-tests"],
-}
-
-// TODO: the test infrastructure isn't yet capable of running this,
-// so it's broken out into its own test so that the main libutils_tests
-// can be in presubmit even if this can't.
+// Include subdirectory makefiles
+// ============================================================
 
 cc_test {
-    name: "libutils_singleton_test",
-    srcs: ["Singleton_test.cpp"],
-    cflags: [
-        "-Wall",
-        "-Werror",
-    ],
-    shared_libs: ["libbase"],
-
-    required: [
-        ":libutils_test_singleton1",
-        ":libutils_test_singleton2",
-    ],
-}
-
-cc_test_library {
-    name: "libutils_test_singleton1",
+    name: "SharedBufferTest",
     host_supported: true,
-    relative_install_path: "libutils_test",
-    srcs: ["Singleton_test1.cpp"],
+    static_libs: ["libutils"],
+    shared_libs: ["liblog"],
+    srcs: ["SharedBufferTest.cpp"],
     cflags: [
         "-Wall",
         "-Werror",
     ],
-}
-
-cc_test_library {
-    name: "libutils_test_singleton2",
-    host_supported: true,
-    relative_install_path: "libutils_test",
-    srcs: ["Singleton_test2.cpp"],
-    cflags: [
-        "-Wall",
-        "-Werror",
-    ],
-    shared_libs: ["libutils_test_singleton1"],
 }

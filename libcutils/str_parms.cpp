@@ -354,8 +354,12 @@ static bool combine_strings(void *key, void *value, void *context)
 char *str_parms_to_str(struct str_parms *str_parms)
 {
     char *str = NULL;
-    hashmapForEach(str_parms->map, combine_strings, &str);
-    return (str != NULL) ? str : strdup("");
+
+    if (hashmapSize(str_parms->map) > 0)
+        hashmapForEach(str_parms->map, combine_strings, &str);
+    else
+        str = strdup("");
+    return str;
 }
 
 static bool dump_entry(void* key, void* value, void* /*context*/) {
