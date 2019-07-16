@@ -296,6 +296,8 @@ public:
         getWeakRefs()->trackMe(enable, retain); 
     }
 
+    typedef RefBase basetype;
+
 protected:
                             RefBase();
     virtual                 ~RefBase();
