@@ -346,6 +346,7 @@ void* String16::edit() {
     if (isStaticString()) {
         buf = static_cast<SharedBuffer*>(alloc((size() + 1) * sizeof(char16_t)));
         if (buf) {
+            buf->acquire();
             memcpy(buf->data(), mString, (size() + 1) * sizeof(char16_t));
         }
     } else {
@@ -364,6 +365,7 @@ void* String16::editResize(size_t newSize) {
         }
         buf = static_cast<SharedBuffer*>(alloc(newSize));
         if (buf) {
+            buf->acquire();
             memcpy(buf->data(), mString, copySize);
         }
     } else {
