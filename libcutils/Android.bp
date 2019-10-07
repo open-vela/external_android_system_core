@@ -34,7 +34,6 @@ cc_library_headers {
     vendor_available: true,
     recovery_available: true,
     host_supported: true,
-    native_bridge_supported: true,
     export_include_dirs: ["include"],
     target: {
         vendor: {
@@ -58,7 +57,6 @@ cc_library {
     },
     recovery_available: true,
     host_supported: true,
-    native_bridge_supported: true,
     srcs: [
         "config_utils.cpp",
         "canned_fs_config.cpp",
@@ -67,6 +65,8 @@ cc_library {
         "native_handle.cpp",
         "record_stream.cpp",
         "sockets.cpp",
+        "strdup16to8.cpp",
+        "strdup8to16.cpp",
         "strlcpy.c",
         "threads.cpp",
     ],
@@ -114,17 +114,36 @@ cc_library {
         },
 
         android_arm: {
+            srcs: ["arch-arm/memset32.S"],
             sanitize: {
                 misc_undefined: ["integer"],
             },
         },
         android_arm64: {
+            srcs: ["arch-arm64/android_memset.S"],
+            sanitize: {
+                misc_undefined: ["integer"],
+            },
+        },
+
+        android_mips: {
+            srcs: ["arch-mips/android_memset.c"],
+            sanitize: {
+                misc_undefined: ["integer"],
+            },
+        },
+        android_mips64: {
+            srcs: ["arch-mips/android_memset.c"],
             sanitize: {
                 misc_undefined: ["integer"],
             },
         },
 
         android_x86: {
+            srcs: [
+                "arch-x86/android_memset16.S",
+                "arch-x86/android_memset32.S",
+            ],
             // TODO: This is to work around b/29412086.
             // Remove once __mulodi4 is available and move the "sanitize" block
             // to the android target.
@@ -134,6 +153,10 @@ cc_library {
         },
 
         android_x86_64: {
+            srcs: [
+                "arch-x86_64/android_memset16.S",
+                "arch-x86_64/android_memset32.S",
+            ],
             sanitize: {
                 misc_undefined: ["integer"],
             },
@@ -174,10 +197,7 @@ cc_library {
 
 cc_defaults {
     name: "libcutils_test_default",
-    srcs: [
-        "native_handle_test.cpp",
-        "sockets_test.cpp",
-    ],
+    srcs: ["sockets_test.cpp"],
 
     target: {
         android: {
@@ -186,6 +206,7 @@ cc_defaults {
                 "android_get_control_socket_test.cpp",
                 "ashmem_test.cpp",
                 "fs_config_test.cpp",
+                "memset_test.cpp",
                 "multiuser_test.cpp",
                 "properties_test.cpp",
                 "sched_policy_test.cpp",
@@ -223,7 +244,6 @@ cc_test {
     defaults: ["libcutils_test_default"],
     host_supported: true,
     shared_libs: test_libraries,
-    require_root: true,
 }
 
 cc_test {
@@ -235,7 +255,6 @@ cc_test {
         "libcgrouprc_format",
     ] + test_libraries,
     stl: "libc++_static",
-    require_root: true,
 
     target: {
         android: {
