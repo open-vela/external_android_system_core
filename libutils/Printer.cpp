@@ -45,11 +45,9 @@ void Printer::printFormatLine(const char* format, ...) {
 #ifndef _WIN32
     if (vasprintf(&formattedString, format, arglist) < 0) { // returns -1 on error
         ALOGE("%s: Failed to format string", __FUNCTION__);
-        va_end(arglist);
         return;
     }
 #else
-    va_end(arglist);
     return;
 #endif
 
@@ -73,7 +71,7 @@ LogPrinter::LogPrinter(const char* logtag,
 }
 
 void LogPrinter::printLine(const char* string) {
-    if (string == nullptr) {
+    if (string == NULL) {
         ALOGW("%s: NULL string passed in", __FUNCTION__);
         return;
     }
@@ -107,7 +105,7 @@ FdPrinter::FdPrinter(int fd, unsigned int indent, const char* prefix) :
 }
 
 void FdPrinter::printLine(const char* string) {
-    if (string == nullptr) {
+    if (string == NULL) {
         ALOGW("%s: NULL string passed in", __FUNCTION__);
         return;
     } else if (mFd < 0) {
@@ -127,16 +125,16 @@ String8Printer::String8Printer(String8* target, const char* prefix) :
         mTarget(target),
         mPrefix(prefix ?: "") {
 
-    if (target == nullptr) {
+    if (target == NULL) {
         ALOGW("%s: Target string was NULL", __FUNCTION__);
     }
 }
 
 void String8Printer::printLine(const char* string) {
-    if (string == nullptr) {
+    if (string == NULL) {
         ALOGW("%s: NULL string passed in", __FUNCTION__);
         return;
-    } else if (mTarget == nullptr) {
+    } else if (mTarget == NULL) {
         ALOGW("%s: Target string was NULL", __FUNCTION__);
         return;
     }

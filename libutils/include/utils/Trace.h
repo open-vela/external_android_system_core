@@ -17,12 +17,7 @@
 #ifndef ANDROID_TRACE_H
 #define ANDROID_TRACE_H
 
-#if defined(_WIN32)
-
-#define ATRACE_NAME(...)
-#define ATRACE_CALL()
-
-#else  // !_WIN32
+#if defined(__ANDROID__)
 
 #include <stdint.h>
 
@@ -54,8 +49,13 @@ private:
     uint64_t mTag;
 };
 
-}  // namespace android
+}; // namespace android
 
-#endif  // _WIN32
+#else // !__ANDROID__
+
+#define ATRACE_NAME(...)
+#define ATRACE_CALL()
+
+#endif // __ANDROID__
 
 #endif // ANDROID_TRACE_H

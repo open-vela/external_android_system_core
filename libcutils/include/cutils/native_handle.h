@@ -28,8 +28,8 @@ extern "C" {
 
 /* Declare a char array for use with native_handle_init */
 #define NATIVE_HANDLE_DECLARE_STORAGE(name, maxFds, maxInts) \
-    alignas(native_handle_t) char (name)[                            \
-      sizeof(native_handle_t) + sizeof(int) * ((maxFds) + (maxInts))]
+    alignas(native_handle_t) char name[                            \
+      sizeof(native_handle_t) + sizeof(int) * (maxFds + maxInts)]
 
 typedef struct native_handle
 {
@@ -45,8 +45,6 @@ typedef struct native_handle
 #pragma clang diagnostic pop
 #endif
 } native_handle_t;
-
-typedef const native_handle_t* buffer_handle_t;
 
 /*
  * native_handle_close
@@ -69,11 +67,10 @@ native_handle_t* native_handle_init(char* storage, int numFds, int numInts);
 
 /*
  * native_handle_create
- *
+ * 
  * creates a native_handle_t and initializes it. must be destroyed with
- * native_handle_delete(). Note that numFds must be <= NATIVE_HANDLE_MAX_FDS,
- * numInts must be <= NATIVE_HANDLE_MAX_INTS, and both must be >= 0.
- *
+ * native_handle_delete().
+ * 
  */
 native_handle_t* native_handle_create(int numFds, int numInts);
 
