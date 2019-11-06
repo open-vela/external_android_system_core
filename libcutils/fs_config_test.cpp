@@ -25,7 +25,8 @@
 #include <android-base/strings.h>
 
 #include <private/android_filesystem_config.h>
-#include <private/fs_config.h>
+
+#include "fs_config.h"
 
 extern const fs_path_config* __for_testing_only__android_dirs;
 extern const fs_path_config* __for_testing_only__android_files;
@@ -42,24 +43,35 @@ static const struct fs_config_cmp_test {
     const char* path;
     bool match;
 } fs_config_cmp_tests[] = {
-    // clang-format off
+        // clang-format off
     { true,  "system/lib",             "system/lib/hw",           true  },
     { true,  "vendor/lib",             "system/vendor/lib/hw",    true  },
-    { true,  "system/vendor/lib",      "vendor/lib/hw",           true  },
+    { true,  "system/vendor/lib",      "vendor/lib/hw",           false },
     { true,  "system/vendor/lib",      "system/vendor/lib/hw",    true  },
+    { true,  "foo/*/bar/*",            "foo/1/bar/2",             true  },
+    { true,  "foo/*/bar/*",            "foo/1/bar",               true  },
+    { true,  "foo/*/bar/*",            "foo/1/bar/2/3",           true  },
+    { true,  "foo/*/bar/*",            "foo/1/bar/2/3/",          true  },
     { false, "vendor/bin/wifi",        "system/vendor/bin/w",     false },
     { false, "vendor/bin/wifi",        "system/vendor/bin/wifi",  true  },
     { false, "vendor/bin/wifi",        "system/vendor/bin/wifi2", false },
     { false, "system/vendor/bin/wifi", "system/vendor/bin/wifi",  true, },
-    { false, "odm/bin/wifi",           "system/odm/bin/wifi",     true  },
-    { false, "oem/bin/wifi",           "system/oem/bin/wifi",     true  },
+    { false, "odm/bin/wifi",           "system/odm/bin/wifi",     false },
+    { false, "odm/bin/wifi",           "vendor/odm/bin/wifi",     true  },
+    { false, "oem/bin/wifi",           "system/oem/bin/wifi",     false },
     { false, "data/bin/wifi",          "system/data/bin/wifi",    false },
     { false, "system/bin/*",           "system/bin/wifi",         true  },
     { false, "vendor/bin/*",           "system/vendor/bin/wifi",  true  },
     { false, "system/bin/*",           "system/bin",              false },
-    { false, "system/vendor/bin/*",    "vendor/bin/wifi",         true  },
+    { false, "system/vendor/bin/*",    "vendor/bin/wifi",         false },
+    { false, "foo/*/bar/*",            "foo/1/bar/2",             true  },
+    { false, "foo/*/bar/*",            "foo/1/bar",               false },
+    { false, "foo/*/bar/*",            "foo/1/bar/2/3",           true  },
+    { false, "foo/*/bar/*.so",         "foo/1/bar/2/3",           false },
+    { false, "foo/*/bar/*.so",         "foo/1/bar/2.so",          true  },
+    { false, "foo/*/bar/*.so",         "foo/1/bar/2/3.so",        true  },
     { false, NULL,                     NULL,                      false },
-    // clang-format on
+        // clang-format on
 };
 
 static bool check_unique(std::vector<const char*>& paths, const std::string& config_name,

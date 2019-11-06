@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 The Android Open Source Project
+ * Copyright (C) 2016 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,35 @@
  * limitations under the License.
  */
 
-#ifndef __CUTILS_SCHED_POLICY_H
-#define __CUTILS_SCHED_POLICY_H
+#include <utils/Mutex.h>
 
-/*
- * For backwards compatibility only
- * New users should include processgroup/sched_policy.h directly
- */
-#include <processgroup/sched_policy.h>
+#include <gtest/gtest.h>
 
-#endif /* __CUTILS_SCHED_POLICY_H */ 
+static android::Mutex mLock;
+static int i GUARDED_BY(mLock);
+
+void modifyLockedVariable() REQUIRES(mLock) {
+    i = 1;
+}
+
+TEST(Mutex, compile) {
+    android::Mutex::Autolock _l(mLock);
+    i = 0;
+    modifyLockedVariable();
+}
+
+TEST(Mutex, tryLock) {
+    if (mLock.tryLock() != 0) {
+        return;
+    }
+    mLock.unlock();
+}
+
+#if defined(__ANDROID__)
+TEST(Mutex, timedLock) {
+    if (mLock.timedLock(1) != 0) {
+        return;
+    }
+    mLock.unlock();
+}
+#endif
