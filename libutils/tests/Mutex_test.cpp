@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 The Android Open Source Project
+ * Copyright (C) 2016 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,19 @@
  * limitations under the License.
  */
 
-#ifndef ANDROID_UTILS_ATOMIC_H
-#define ANDROID_UTILS_ATOMIC_H
+#include <utils/Mutex.h>
 
-// DO NOT USE: Please instead use std::atomic
+#include <gtest/gtest.h>
 
-#include <cutils/atomic.h>
+static android::Mutex mLock;
+static int i GUARDED_BY(mLock);
 
-#endif // ANDROID_UTILS_ATOMIC_H
+void modifyLockedVariable() REQUIRES(mLock) {
+    i = 1;
+}
+
+TEST(Mutex, compile) {
+    android::Mutex::Autolock _l(mLock);
+    i = 0;
+    modifyLockedVariable();
+}
