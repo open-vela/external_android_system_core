@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (C) 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,24 @@
  * limitations under the License.
  */
 
-#ifndef __CUTILS_OPEN_MEMSTREAM_H__
-#define __CUTILS_OPEN_MEMSTREAM_H__
+#pragma once
 
-#include <stdio.h>
+#include <stdint.h>
 
-#if defined(__APPLE__)
+// Binary format for the runtime <partition>/etc/fs_config_(dirs|files) filesystem override files.
+struct fs_path_config_from_file {
+    uint16_t len;
+    uint16_t mode;
+    uint16_t uid;
+    uint16_t gid;
+    uint64_t capabilities;
+    char prefix[];
+} __attribute__((__aligned__(sizeof(uint64_t))));
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-FILE* open_memstream(char** bufp, size_t* sizep);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* __APPLE__ */
-
-#endif /*__CUTILS_OPEN_MEMSTREAM_H__*/
+struct fs_path_config {
+    unsigned mode;
+    unsigned uid;
+    unsigned gid;
+    uint64_t capabilities;
+    const char* prefix;
+};

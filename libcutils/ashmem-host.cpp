@@ -24,7 +24,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +33,29 @@
 #include <unistd.h>
 
 #include <utils/Compat.h>
+
+static bool ashmem_validate_stat(int fd, struct stat* buf) {
+    int result = fstat(fd, buf);
+    if (result == -1) {
+        return false;
+    }
+
+    /*
+     * Check if this is an "ashmem" region.
+     * TODO: This is very hacky, and can easily break.
+     * We need some reliable indicator.
+     */
+    if (!(buf->st_nlink == 0 && S_ISREG(buf->st_mode))) {
+        errno = ENOTTY;
+        return false;
+    }
+    return true;
+}
+
+int ashmem_valid(int fd) {
+    struct stat buf;
+    return ashmem_validate_stat(fd, &buf);
+}
 
 int ashmem_create_region(const char* /*ignored*/, size_t size) {
     char pattern[PATH_MAX];
@@ -66,18 +88,7 @@ int ashmem_unpin_region(int /*fd*/, size_t /*offset*/, size_t /*len*/) {
 int ashmem_get_size_region(int fd)
 {
     struct stat buf;
-    int result = fstat(fd, &buf);
-    if (result == -1) {
-        return -1;
-    }
-
-    /*
-     * Check if this is an "ashmem" region.
-     * TODO: This is very hacky, and can easily break.
-     * We need some reliable indicator.
-     */
-    if (!(buf.st_nlink == 0 && S_ISREG(buf.st_mode))) {
-        errno = ENOTTY;
+    if (!ashmem_validate_stat(fd, &buf)) {
         return -1;
     }
 

@@ -24,6 +24,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fnmatch.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,28 +32,24 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <string>
+
+#include <android-base/strings.h>
 #include <log/log.h>
 #include <private/android_filesystem_config.h>
 #include <utils/Compat.h>
+
+#include "fs_config.h"
 
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
 
-// My kingdom for <endian.h>
-static inline uint16_t get2LE(const uint8_t* src) {
-    return src[0] | (src[1] << 8);
-}
-
-static inline uint64_t get8LE(const uint8_t* src) {
-    uint32_t low, high;
-
-    low = src[0] | (src[1] << 8) | (src[2] << 16) | (src[3] << 24);
-    high = src[4] | (src[5] << 8) | (src[6] << 16) | (src[7] << 24);
-    return ((uint64_t)high << 32) | (uint64_t)low;
-}
+using android::base::EndsWith;
+using android::base::StartsWith;
 
 #define ALIGN(x, alignment) (((x) + ((alignment)-1)) & ~((alignment)-1))
+#define CAP_MASK_LONG(cap_name) (1ULL << (cap_name))
 
 // Rules for directories.
 // These rules are applied based on "first match", so they
@@ -60,7 +57,7 @@ static inline uint64_t get8LE(const uint8_t* src) {
 // way up to the root.
 
 static const struct fs_path_config android_dirs[] = {
-    // clang-format off
+        // clang-format off
     { 00770, AID_SYSTEM,       AID_CACHE,        0, "cache" },
     { 00555, AID_ROOT,         AID_ROOT,         0, "config" },
     { 00771, AID_SYSTEM,       AID_SYSTEM,       0, "data/app" },
@@ -80,17 +77,18 @@ static const struct fs_path_config android_dirs[] = {
     { 00775, AID_ROOT,         AID_ROOT,         0, "data/preloads" },
     { 00771, AID_SYSTEM,       AID_SYSTEM,       0, "data" },
     { 00755, AID_ROOT,         AID_SYSTEM,       0, "mnt" },
-    { 00755, AID_ROOT,         AID_SHELL,        0, "product/bin" },
-    { 00750, AID_ROOT,         AID_SHELL,        0, "sbin" },
+    { 00751, AID_ROOT,         AID_SHELL,        0, "product/bin" },
     { 00777, AID_ROOT,         AID_ROOT,         0, "sdcard" },
     { 00751, AID_ROOT,         AID_SDCARD_R,     0, "storage" },
-    { 00755, AID_ROOT,         AID_SHELL,        0, "system/bin" },
+    { 00751, AID_ROOT,         AID_SHELL,        0, "system/bin" },
     { 00755, AID_ROOT,         AID_ROOT,         0, "system/etc/ppp" },
     { 00755, AID_ROOT,         AID_SHELL,        0, "system/vendor" },
-    { 00755, AID_ROOT,         AID_SHELL,        0, "system/xbin" },
+    { 00751, AID_ROOT,         AID_SHELL,        0, "system/xbin" },
+    { 00751, AID_ROOT,         AID_SHELL,        0, "system/apex/*/bin" },
+    { 00751, AID_ROOT,         AID_SHELL,        0, "vendor/bin" },
     { 00755, AID_ROOT,         AID_SHELL,        0, "vendor" },
     { 00755, AID_ROOT,         AID_ROOT,         0, 0 },
-    // clang-format on
+        // clang-format on
 };
 #ifndef __ANDROID_VNDK__
 auto __for_testing_only__android_dirs = android_dirs;
@@ -107,7 +105,9 @@ static const char sys_conf_file[] = "/system/etc/fs_config_files";
 // although the developer is advised to restrict the scope to the /vendor or
 // oem/ file-system since the intent is to provide support for customized
 // portions of a separate vendor.img or oem.img.  Has to remain open so that
-// customization can also land on /system/vendor, /system/oem or /system/odm.
+// customization can also land on /system/vendor, /system/oem, /system/odm,
+// /system/product or /system/system_ext.
+//
 // We expect build-time checking or filtering when constructing the associated
 // fs_config_* files (see build/tools/fs_config/fs_config_generate.c)
 static const char ven_conf_dir[] = "/vendor/etc/fs_config_dirs";
@@ -116,11 +116,14 @@ static const char oem_conf_dir[] = "/oem/etc/fs_config_dirs";
 static const char oem_conf_file[] = "/oem/etc/fs_config_files";
 static const char odm_conf_dir[] = "/odm/etc/fs_config_dirs";
 static const char odm_conf_file[] = "/odm/etc/fs_config_files";
+static const char product_conf_dir[] = "/product/etc/fs_config_dirs";
+static const char product_conf_file[] = "/product/etc/fs_config_files";
+static const char system_ext_conf_dir[] = "/system_ext/etc/fs_config_dirs";
+static const char system_ext_conf_file[] = "/system_ext/etc/fs_config_files";
 static const char* conf[][2] = {
-    {sys_conf_file, sys_conf_dir},
-    {ven_conf_file, ven_conf_dir},
-    {oem_conf_file, oem_conf_dir},
-    {odm_conf_file, odm_conf_dir},
+        {sys_conf_file, sys_conf_dir},         {ven_conf_file, ven_conf_dir},
+        {oem_conf_file, oem_conf_dir},         {odm_conf_file, odm_conf_dir},
+        {product_conf_file, product_conf_dir}, {system_ext_conf_file, system_ext_conf_dir},
 };
 
 // Do not use android_files to grant Linux capabilities.  Use ambient capabilities in their
@@ -130,7 +133,7 @@ static const char* conf[][2] = {
 // Vendor entries should be done via a vendor or device specific config.fs.
 // See https://source.android.com/devices/tech/config/filesystem#using-file-system-capabilities
 static const struct fs_path_config android_files[] = {
-    // clang-format off
+        // clang-format off
     { 00644, AID_SYSTEM,    AID_SYSTEM,    0, "data/app/*" },
     { 00644, AID_SYSTEM,    AID_SYSTEM,    0, "data/app-ephemeral/*" },
     { 00644, AID_SYSTEM,    AID_SYSTEM,    0, "data/app-private/*" },
@@ -142,18 +145,23 @@ static const struct fs_path_config android_files[] = {
     { 00750, AID_ROOT,      AID_SHELL,     0, "data/nativetest64/*" },
     { 00600, AID_ROOT,      AID_ROOT,      0, "default.prop" }, // legacy
     { 00600, AID_ROOT,      AID_ROOT,      0, "system/etc/prop.default" },
-    { 00600, AID_ROOT,      AID_ROOT,      0, "odm/build.prop" },
-    { 00600, AID_ROOT,      AID_ROOT,      0, "odm/default.prop" },
+    { 00600, AID_ROOT,      AID_ROOT,      0, "odm/build.prop" }, // legacy; only for P release
+    { 00600, AID_ROOT,      AID_ROOT,      0, "odm/default.prop" }, // legacy; only for P release
+    { 00600, AID_ROOT,      AID_ROOT,      0, "odm/etc/build.prop" },
     { 00444, AID_ROOT,      AID_ROOT,      0, odm_conf_dir + 1 },
     { 00444, AID_ROOT,      AID_ROOT,      0, odm_conf_file + 1 },
     { 00444, AID_ROOT,      AID_ROOT,      0, oem_conf_dir + 1 },
     { 00444, AID_ROOT,      AID_ROOT,      0, oem_conf_file + 1 },
     { 00600, AID_ROOT,      AID_ROOT,      0, "product/build.prop" },
-    { 00750, AID_ROOT,      AID_SHELL,     0, "sbin/fs_mgr" },
+    { 00444, AID_ROOT,      AID_ROOT,      0, product_conf_dir + 1 },
+    { 00444, AID_ROOT,      AID_ROOT,      0, product_conf_file + 1 },
+    { 00600, AID_ROOT,      AID_ROOT,      0, "system_ext/build.prop" },
+    { 00444, AID_ROOT,      AID_ROOT,      0, system_ext_conf_dir + 1 },
+    { 00444, AID_ROOT,      AID_ROOT,      0, system_ext_conf_file + 1 },
     { 00755, AID_ROOT,      AID_SHELL,     0, "system/bin/crash_dump32" },
     { 00755, AID_ROOT,      AID_SHELL,     0, "system/bin/crash_dump64" },
     { 00755, AID_ROOT,      AID_SHELL,     0, "system/bin/debuggerd" },
-    { 00750, AID_ROOT,      AID_ROOT,      0, "system/bin/install-recovery.sh" },
+    { 00550, AID_LOGD,      AID_LOGD,      0, "system/bin/logd" },
     { 00700, AID_ROOT,      AID_ROOT,      0, "system/bin/secilc" },
     { 00750, AID_ROOT,      AID_ROOT,      0, "system/bin/uncrypt" },
     { 00600, AID_ROOT,      AID_ROOT,      0, "system/build.prop" },
@@ -164,9 +172,10 @@ static const struct fs_path_config android_files[] = {
     { 00550, AID_ROOT,      AID_SHELL,     0, "system/etc/init.ril" },
     { 00555, AID_ROOT,      AID_ROOT,      0, "system/etc/ppp/*" },
     { 00555, AID_ROOT,      AID_ROOT,      0, "system/etc/rc.*" },
-    { 00440, AID_ROOT,      AID_ROOT,      0, "system/etc/recovery.img" },
+    { 00750, AID_ROOT,      AID_ROOT,      0, "vendor/bin/install-recovery.sh" },
     { 00600, AID_ROOT,      AID_ROOT,      0, "vendor/build.prop" },
     { 00600, AID_ROOT,      AID_ROOT,      0, "vendor/default.prop" },
+    { 00440, AID_ROOT,      AID_ROOT,      0, "vendor/etc/recovery.img" },
     { 00444, AID_ROOT,      AID_ROOT,      0, ven_conf_dir + 1 },
     { 00444, AID_ROOT,      AID_ROOT,      0, ven_conf_file + 1 },
 
@@ -179,15 +188,12 @@ static const struct fs_path_config android_files[] = {
     // in user builds.
     { 00700, AID_SYSTEM,    AID_SHELL,     CAP_MASK_LONG(CAP_BLOCK_SUSPEND),
                                               "system/bin/inputflinger" },
-    { 00550, AID_LOGD,      AID_LOGD,      CAP_MASK_LONG(CAP_SYSLOG) |
-                                           CAP_MASK_LONG(CAP_AUDIT_CONTROL) |
-                                           CAP_MASK_LONG(CAP_SETGID),
-                                              "system/bin/logd" },
-    { 00550, AID_SYSTEM,    AID_LOG,      CAP_MASK_LONG(CAP_SYSLOG),
-                                              "system/bin/bootstat" },
     { 00750, AID_ROOT,      AID_SHELL,     CAP_MASK_LONG(CAP_SETUID) |
                                            CAP_MASK_LONG(CAP_SETGID),
                                               "system/bin/run-as" },
+    { 00750, AID_ROOT,      AID_SHELL,     CAP_MASK_LONG(CAP_SETUID) |
+                                           CAP_MASK_LONG(CAP_SETGID),
+                                              "system/bin/simpleperf_app_runner" },
 
     // Support FIFO scheduling mode in SurfaceFlinger.
     { 00755, AID_SYSTEM,    AID_GRAPHICS,  CAP_MASK_LONG(CAP_SYS_NICE),
@@ -196,16 +202,15 @@ static const struct fs_path_config android_files[] = {
     { 00755, AID_ROOT,      AID_ROOT,      0, "bin/*" },
     { 00640, AID_ROOT,      AID_SHELL,     0, "fstab.*" },
     { 00750, AID_ROOT,      AID_SHELL,     0, "init*" },
+    { 00755, AID_ROOT,      AID_SHELL,     0, "odm/bin/*" },
     { 00755, AID_ROOT,      AID_SHELL,     0, "product/bin/*" },
-    { 00750, AID_ROOT,      AID_SHELL,     0, "sbin/*" },
     { 00755, AID_ROOT,      AID_SHELL,     0, "system/bin/*" },
-    { 00755, AID_ROOT,      AID_ROOT,      0, "system/lib/valgrind/*" },
-    { 00755, AID_ROOT,      AID_ROOT,      0, "system/lib64/valgrind/*" },
     { 00755, AID_ROOT,      AID_SHELL,     0, "system/xbin/*" },
+    { 00755, AID_ROOT,      AID_SHELL,     0, "system/apex/*/bin/*" },
     { 00755, AID_ROOT,      AID_SHELL,     0, "vendor/bin/*" },
     { 00755, AID_ROOT,      AID_SHELL,     0, "vendor/xbin/*" },
     { 00644, AID_ROOT,      AID_ROOT,      0, 0 },
-    // clang-format on
+        // clang-format on
 };
 #ifndef __ANDROID_VNDK__
 auto __for_testing_only__android_files = android_files;
@@ -239,48 +244,56 @@ static int fs_config_open(int dir, int which, const char* target_out_path) {
     return fd;
 }
 
-// if path is "odm/<stuff>", "oem/<stuff>", "product/<stuff>" or
-// "vendor/<stuff>"
-static bool is_partition(const char* path, size_t len) {
-    static const char* partitions[] = {"odm/", "oem/", "product/", "vendor/"};
+// if path is "odm/<stuff>", "oem/<stuff>", "product/<stuff>",
+// "system_ext/<stuff>" or "vendor/<stuff>"
+static bool is_partition(const std::string& path) {
+    static const char* partitions[] = {"odm/", "oem/", "product/", "system_ext/", "vendor/"};
     for (size_t i = 0; i < (sizeof(partitions) / sizeof(partitions[0])); ++i) {
-        size_t plen = strlen(partitions[i]);
-        if (len <= plen) continue;
-        if (!strncmp(path, partitions[i], plen)) return true;
+        if (StartsWith(path, partitions[i])) return true;
     }
     return false;
 }
 
-static inline bool prefix_cmp(bool partial, const char* prefix, size_t len, const char* path,
-                              size_t plen) {
-    return ((partial && plen >= len) || (plen == len)) && !strncmp(prefix, path, len);
-}
-
 // alias prefixes of "<partition>/<stuff>" to "system/<partition>/<stuff>" or
 // "system/<partition>/<stuff>" to "<partition>/<stuff>"
-static bool fs_config_cmp(bool partial, const char* prefix, size_t len, const char* path,
-                          size_t plen) {
-    // If name ends in * then allow partial matches.
-    if (!partial && prefix[len - 1] == '*') {
-        len--;
-        partial = true;
+static bool fs_config_cmp(bool dir, const char* prefix, size_t len, const char* path, size_t plen) {
+    std::string pattern(prefix, len);
+    std::string input(path, plen);
+
+    // Massage pattern and input so that they can be used by fnmatch where
+    // directories have to end with /.
+    if (dir) {
+        if (!EndsWith(input, "/")) {
+            input.append("/");
+        }
+
+        if (!EndsWith(pattern, "/*")) {
+            if (EndsWith(pattern, "/")) {
+                pattern.append("*");
+            } else {
+                pattern.append("/*");
+            }
+        }
     }
 
-    if (prefix_cmp(partial, prefix, len, path, plen)) return true;
+    // no FNM_PATHNAME is set in order to match a/b/c/d with a/*
+    // FNM_ESCAPE is set in order to prevent using \\? and \\* and maintenance issues.
+    const int fnm_flags = FNM_NOESCAPE;
+    if (fnmatch(pattern.c_str(), input.c_str(), fnm_flags) == 0) return true;
 
-    static const char system[] = "system/";
-    if (!strncmp(path, system, strlen(system))) {
-        path += strlen(system);
-        plen -= strlen(system);
-    } else if (len <= strlen(system)) {
-        return false;
-    } else if (strncmp(prefix, system, strlen(system))) {
-        return false;
-    } else {
-        prefix += strlen(system);
-        len -= strlen(system);
+    // Check match between logical partition's files and patterns.
+    static constexpr const char* kLogicalPartitions[] = {"system/product/", "system/system_ext/",
+                                                         "system/vendor/", "vendor/odm/"};
+    for (auto& logical_partition : kLogicalPartitions) {
+        if (StartsWith(input, logical_partition)) {
+            std::string input_in_partition = input.substr(input.find('/') + 1);
+            if (!is_partition(input_in_partition)) continue;
+            if (fnmatch(pattern.c_str(), input_in_partition.c_str(), fnm_flags) == 0) {
+                return true;
+            }
+        }
     }
-    return is_partition(prefix, len) && prefix_cmp(partial, prefix, len, path, plen);
+    return false;
 }
 #ifndef __ANDROID_VNDK__
 auto __for_testing_only__fs_config_cmp = fs_config_cmp;
@@ -305,7 +318,7 @@ void fs_config(const char* path, int dir, const char* target_out_path, unsigned*
 
         while (TEMP_FAILURE_RETRY(read(fd, &header, sizeof(header))) == sizeof(header)) {
             char* prefix;
-            uint16_t host_len = get2LE((const uint8_t*)&header.len);
+            uint16_t host_len = header.len;
             ssize_t len, remainder = host_len - sizeof(header);
             if (remainder <= 0) {
                 ALOGE("%s len is corrupted", conf[which][dir]);
@@ -330,10 +343,10 @@ void fs_config(const char* path, int dir, const char* target_out_path, unsigned*
             if (fs_config_cmp(dir, prefix, len, path, plen)) {
                 free(prefix);
                 close(fd);
-                *uid = get2LE((const uint8_t*)&(header.uid));
-                *gid = get2LE((const uint8_t*)&(header.gid));
-                *mode = (*mode & (~07777)) | get2LE((const uint8_t*)&(header.mode));
-                *capabilities = get8LE((const uint8_t*)&(header.capabilities));
+                *uid = header.uid;
+                *gid = header.gid;
+                *mode = (*mode & (~07777)) | header.mode;
+                *capabilities = header.capabilities;
                 return;
             }
             free(prefix);
@@ -350,22 +363,4 @@ void fs_config(const char* path, int dir, const char* target_out_path, unsigned*
     *gid = pc->gid;
     *mode = (*mode & (~07777)) | pc->mode;
     *capabilities = pc->capabilities;
-}
-
-ssize_t fs_config_generate(char* buffer, size_t length, const struct fs_path_config* pc) {
-    struct fs_path_config_from_file* p = (struct fs_path_config_from_file*)buffer;
-    size_t len = ALIGN(sizeof(*p) + strlen(pc->prefix) + 1, sizeof(uint64_t));
-
-    if ((length < len) || (len > UINT16_MAX)) {
-        return -ENOSPC;
-    }
-    memset(p, 0, len);
-    uint16_t host_len = len;
-    p->len = get2LE((const uint8_t*)&host_len);
-    p->mode = get2LE((const uint8_t*)&(pc->mode));
-    p->uid = get2LE((const uint8_t*)&(pc->uid));
-    p->gid = get2LE((const uint8_t*)&(pc->gid));
-    p->capabilities = get8LE((const uint8_t*)&(pc->capabilities));
-    strcpy(p->prefix, pc->prefix);
-    return len;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,21 @@
  * limitations under the License.
  */
 
-#include <utils/Mutex.h>
+#include "utils/FileMap.h"
 
 #include <gtest/gtest.h>
 
-static android::Mutex mLock;
-static int i GUARDED_BY(mLock);
+#include "android-base/file.h"
 
-void modifyLockedVariable() REQUIRES(mLock) {
-    i = 1;
-}
+TEST(FileMap, zero_length_mapping) {
+    // http://b/119818070 "app crashes when reading asset of zero length".
+    // mmap fails with EINVAL for a zero length region.
+    TemporaryFile tf;
+    ASSERT_TRUE(tf.fd != -1);
 
-TEST(Mutex, compile) {
-    android::Mutex::Autolock _l(mLock);
-    i = 0;
-    modifyLockedVariable();
+    android::FileMap m;
+    ASSERT_TRUE(m.create("test", tf.fd, 4096, 0, true));
+    ASSERT_STREQ("test", m.getFileName());
+    ASSERT_EQ(0u, m.getDataLength());
+    ASSERT_EQ(4096, m.getDataOffset());
 }
