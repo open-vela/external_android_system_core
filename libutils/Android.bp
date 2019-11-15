@@ -123,6 +123,7 @@ cc_library {
     defaults: ["libutils_defaults"],
 
     srcs: [
+        "Errors.cpp",
         "FileMap.cpp",
         "JenkinsHash.cpp",
         "NativeHandle.cpp",
