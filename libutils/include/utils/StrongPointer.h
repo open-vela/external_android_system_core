@@ -134,8 +134,7 @@ private:
 void sp_report_race();
 void sp_report_stack_pointer();
 
-#undef COMPARE_STRONG
-#undef COMPARE_STRONG_FUNCTIONAL
+#undef COMPARE
 
 // ---------------------------------------------------------------------------
 // No user serviceable parts below here.
