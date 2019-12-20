@@ -52,12 +52,7 @@ public:
 
     template<size_t N>
     static size_t align(void*& buffer) {
-        static_assert(!(N & (N - 1)), "Can only align to a power of 2.");
-        void* b = buffer;
-        buffer = reinterpret_cast<void*>((uintptr_t(buffer) + (N-1)) & ~(N-1));
-        size_t delta = size_t(uintptr_t(buffer) - uintptr_t(b));
-        memset(b, 0, delta);
-        return delta;
+        return align<N>( const_cast<void const*&>(buffer) );
     }
 
     static void advance(void*& buffer, size_t& size, size_t offset) {
