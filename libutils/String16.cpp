@@ -90,16 +90,23 @@ String16::String16()
 {
 }
 
+String16::String16(StaticLinkage)
+    : mString(nullptr)
+{
+    // this constructor is used when we can't rely on the static-initializers
+    // having run. In this case we always allocate an empty string. It's less
+    // efficient than using getEmptyString(), but we assume it's uncommon.
+
+    SharedBuffer* buf = static_cast<SharedBuffer*>(alloc(sizeof(char16_t)));
+    char16_t* data = static_cast<char16_t*>(buf->data());
+    data[0] = 0;
+    mString = data;
+}
+
 String16::String16(const String16& o)
     : mString(o.mString)
 {
     acquire();
-}
-
-String16::String16(String16&& o) noexcept
-    : mString(o.mString)
-{
-    o.mString = getEmptyString();
 }
 
 String16::String16(const String16& o, size_t len, size_t begin)
@@ -130,13 +137,6 @@ String16::String16(const char* o, size_t len)
 String16::~String16()
 {
     release();
-}
-
-String16& String16::operator=(String16&& other) noexcept {
-    release();
-    mString = other.mString;
-    other.mString = getEmptyString();
-    return *this;
 }
 
 size_t String16::size() const
@@ -403,6 +403,28 @@ size_t String16::staticStringSize() const {
     return static_cast<size_t>(*(p - 1));
 }
 
+status_t String16::makeLower()
+{
+    const size_t N = size();
+    const char16_t* str = string();
+    char16_t* edited = nullptr;
+    for (size_t i=0; i<N; i++) {
+        const char16_t v = str[i];
+        if (v >= 'A' && v <= 'Z') {
+            if (!edited) {
+                SharedBuffer* buf = static_cast<SharedBuffer*>(edit());
+                if (!buf) {
+                    return NO_MEMORY;
+                }
+                edited = (char16_t*)buf->data();
+                mString = str = edited;
+            }
+            edited[i] = tolower((char)v);
+        }
+    }
+    return OK;
+}
+
 status_t String16::replaceAll(char16_t replaceThis, char16_t withThis)
 {
     const size_t N = size();
@@ -422,6 +444,38 @@ status_t String16::replaceAll(char16_t replaceThis, char16_t withThis)
         }
     }
     return OK;
+}
+
+status_t String16::remove(size_t len, size_t begin)
+{
+    const size_t N = size();
+    if (begin >= N) {
+        release();
+        mString = getEmptyString();
+        return OK;
+    }
+    if ((begin+len) > N) len = N-begin;
+    if (begin == 0 && len == N) {
+        return OK;
+    }
+
+    if (begin > 0) {
+        SharedBuffer* buf = static_cast<SharedBuffer*>(editResize((N + 1) * sizeof(char16_t)));
+        if (!buf) {
+            return NO_MEMORY;
+        }
+        char16_t* str = (char16_t*)buf->data();
+        memmove(str, str+begin, (N-begin+1)*sizeof(char16_t));
+        mString = str;
+    }
+    SharedBuffer* buf = static_cast<SharedBuffer*>(editResize((len + 1) * sizeof(char16_t)));
+    if (buf) {
+        char16_t* str = (char16_t*)buf->data();
+        str[len] = 0;
+        mString = str;
+        return OK;
+    }
+    return NO_MEMORY;
 }
 
 }; // namespace android

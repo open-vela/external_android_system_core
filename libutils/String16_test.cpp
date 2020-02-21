@@ -58,24 +58,9 @@ TEST(String16Test, Copy) {
     EXPECT_STR16EQ(u"Verify me", another);
 }
 
-TEST(String16Test, CopyAssign) {
-    String16 tmp("Verify me");
-    String16 another;
-    another = tmp;
-    EXPECT_STR16EQ(u"Verify me", tmp);
-    EXPECT_STR16EQ(u"Verify me", another);
-}
-
 TEST(String16Test, Move) {
     String16 tmp("Verify me");
     String16 another(std::move(tmp));
-    EXPECT_STR16EQ(u"Verify me", another);
-}
-
-TEST(String16Test, MoveAssign) {
-    String16 tmp("Verify me");
-    String16 another;
-    another = std::move(tmp);
     EXPECT_STR16EQ(u"Verify me", another);
 }
 
@@ -103,6 +88,20 @@ TEST(String16Test, Insert) {
     tmp.insert(6, u"Insert");
     EXPECT_EQ(15U, tmp.size());
     EXPECT_STR16EQ(u"VerifyInsert me", tmp);
+}
+
+TEST(String16Test, Remove) {
+    String16 tmp("Verify me");
+    tmp.remove(2, 6);
+    EXPECT_EQ(2U, tmp.size());
+    EXPECT_STR16EQ(u" m", tmp);
+}
+
+TEST(String16Test, MakeLower) {
+    String16 tmp("Verify Me!");
+    tmp.makeLower();
+    EXPECT_EQ(10U, tmp.size());
+    EXPECT_STR16EQ(u"verify me!", tmp);
 }
 
 TEST(String16Test, ReplaceAll) {
@@ -169,6 +168,22 @@ TEST(String16Test, StaticStringInsert) {
     EXPECT_FALSE(tmp.isStaticString());
 }
 
+TEST(String16Test, StaticStringRemove) {
+    StaticString16 tmp(u"Verify me");
+    tmp.remove(2, 6);
+    EXPECT_EQ(2U, tmp.size());
+    EXPECT_STR16EQ(u" m", tmp);
+    EXPECT_FALSE(tmp.isStaticString());
+}
+
+TEST(String16Test, StaticStringMakeLower) {
+    StaticString16 tmp(u"Verify me!");
+    tmp.makeLower();
+    EXPECT_EQ(10U, tmp.size());
+    EXPECT_STR16EQ(u"verify me!", tmp);
+    EXPECT_FALSE(tmp.isStaticString());
+}
+
 TEST(String16Test, StaticStringReplaceAll) {
     StaticString16 tmp(u"Verify verify Verify");
     tmp.replaceAll(u'r', u'!');
@@ -189,39 +204,15 @@ TEST(String16Test, StringSetToStaticString) {
     EXPECT_STR16EQ(u"Verify me", another);
 }
 
-TEST(String16Test, StringCopyAssignFromStaticString) {
+TEST(String16Test, StringMoveFromStaticString) {
     StaticString16 tmp(u"Verify me");
-    String16 another(u"nonstatic");
-    another = tmp;
+    String16 another(std::move(tmp));
     EXPECT_STR16EQ(u"Verify me", another);
-    EXPECT_TRUE(another.isStaticString());
-    EXPECT_STR16EQ(u"Verify me", tmp);
-    EXPECT_TRUE(tmp.isStaticString());
-}
-
-TEST(String16Test, StringMoveAssignFromStaticString) {
-    StaticString16 tmp(u"Verify me");
-    String16 another(u"nonstatic");
-    another = std::move(tmp);
-    EXPECT_STR16EQ(u"Verify me", another);
-    EXPECT_TRUE(another.isStaticString());
 }
 
 TEST(String16Test, EmptyStringIsStatic) {
     String16 tmp("");
     EXPECT_TRUE(tmp.isStaticString());
-}
-
-TEST(String16Test, OverreadUtf8Conversion) {
-    char tmp[] = {'a', static_cast<char>(0xe0), '\0'};
-    String16 another(tmp);
-    EXPECT_TRUE(another.size() == 0);
-}
-
-TEST(String16Test, ValidUtf8Conversion) {
-    String16 another("abcdef");
-    EXPECT_EQ(6U, another.size());
-    EXPECT_STR16EQ(another, u"abcdef");
 }
 
 }  // namespace android

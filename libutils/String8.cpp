@@ -25,8 +25,6 @@
 
 #include <ctype.h>
 
-#include <string>
-
 #include "SharedBuffer.h"
 
 /*
@@ -127,6 +125,19 @@ String8::String8()
 {
 }
 
+String8::String8(StaticLinkage)
+    : mString(nullptr)
+{
+    // this constructor is used when we can't rely on the static-initializers
+    // having run. In this case we always allocate an empty string. It's less
+    // efficient than using getEmptyString(), but we assume it's uncommon.
+
+    char* data = static_cast<char*>(
+            SharedBuffer::alloc(sizeof(char))->data());
+    data[0] = 0;
+    mString = data;
+}
+
 String8::String8(const String8& o)
     : mString(o.mString)
 {
@@ -165,7 +176,9 @@ String8::String8(const char16_t* o, size_t len)
 }
 
 String8::String8(const char32_t* o)
-    : mString(allocFromUTF32(o, std::char_traits<char32_t>::length(o))) {}
+    : mString(allocFromUTF32(o, strlen32(o)))
+{
+}
 
 String8::String8(const char32_t* o, size_t len)
     : mString(allocFromUTF32(o, len))
@@ -309,14 +322,8 @@ status_t String8::appendFormatV(const char* fmt, va_list args)
     n = vsnprintf(nullptr, 0, fmt, tmp_args);
     va_end(tmp_args);
 
-    if (n < 0) return UNKNOWN_ERROR;
-
-    if (n > 0) {
+    if (n != 0) {
         size_t oldLength = length();
-        if ((size_t)n > SIZE_MAX - 1 ||
-            oldLength > SIZE_MAX - (size_t)n - 1) {
-            return NO_MEMORY;
-        }
         char* buf = lockBuffer(oldLength + n);
         if (buf) {
             vsnprintf(buf + oldLength, n + 1, fmt, args);
@@ -415,31 +422,73 @@ bool String8::removeAll(const char* other) {
 
 void String8::toLower()
 {
-    const size_t length = size();
-    if (length == 0) return;
+    toLower(0, size());
+}
 
-    char* buf = lockBuffer(length);
-    for (size_t i = length; i > 0; --i) {
-        *buf = static_cast<char>(tolower(*buf));
-        buf++;
+void String8::toLower(size_t start, size_t length)
+{
+    const size_t len = size();
+    if (start >= len) {
+        return;
     }
-    unlockBuffer(length);
+    if (start+length > len) {
+        length = len-start;
+    }
+    char* buf = lockBuffer(len);
+    buf += start;
+    while (length > 0) {
+        *buf = tolower(*buf);
+        buf++;
+        length--;
+    }
+    unlockBuffer(len);
+}
+
+void String8::toUpper()
+{
+    toUpper(0, size());
+}
+
+void String8::toUpper(size_t start, size_t length)
+{
+    const size_t len = size();
+    if (start >= len) {
+        return;
+    }
+    if (start+length > len) {
+        length = len-start;
+    }
+    char* buf = lockBuffer(len);
+    buf += start;
+    while (length > 0) {
+        *buf = toupper(*buf);
+        buf++;
+        length--;
+    }
+    unlockBuffer(len);
 }
 
 // ---------------------------------------------------------------------------
 // Path functions
 
-static void setPathName(String8& s, const char* name) {
-    size_t len = strlen(name);
-    char* buf = s.lockBuffer(len);
+void String8::setPathName(const char* name)
+{
+    setPathName(name, strlen(name));
+}
+
+void String8::setPathName(const char* name, size_t len)
+{
+    char* buf = lockBuffer(len);
 
     memcpy(buf, name, len);
 
     // remove trailing path separator, if present
-    if (len > 0 && buf[len - 1] == OS_PATH_SEPARATOR) len--;
+    if (len > 0 && buf[len-1] == OS_PATH_SEPARATOR)
+        len--;
+
     buf[len] = '\0';
 
-    s.unlockBuffer(len);
+    unlockBuffer(len);
 }
 
 String8 String8::getPathLeaf(void) const
@@ -552,7 +601,7 @@ String8& String8::appendPath(const char* name)
         size_t len = length();
         if (len == 0) {
             // no existing filename, just use the new one
-            setPathName(*this, name);
+            setPathName(name);
             return *this;
         }
 
@@ -572,7 +621,7 @@ String8& String8::appendPath(const char* name)
 
         return *this;
     } else {
-        setPathName(*this, name);
+        setPathName(name);
         return *this;
     }
 }
