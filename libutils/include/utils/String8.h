@@ -17,8 +17,7 @@
 #ifndef ANDROID_STRING8_H
 #define ANDROID_STRING8_H
 
-#include <iostream>
-#include <string>
+#include <string> // for std::string
 
 #include <utils/Errors.h>
 #include <utils/Unicode.h>
@@ -241,11 +240,6 @@ private:
 // String8 can be trivially moved using memcpy() because moving does not
 // require any change to the underlying SharedBuffer contents or reference count.
 ANDROID_TRIVIAL_MOVE_TRAIT(String8)
-
-static inline std::ostream& operator<<(std::ostream& os, const String8& str) {
-    os << str.c_str();
-    return os;
-}
 
 // ---------------------------------------------------------------------------
 // No user servicable parts below.
