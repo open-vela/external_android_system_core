@@ -78,6 +78,12 @@ cc_defaults {
         "liblog",
     ],
 
+    arch: {
+        mips: {
+            cflags: ["-DALIGN_DOUBLE"],
+        },
+    },
+
     target: {
         android: {
             cflags: ["-fvisibility=protected"],
@@ -171,6 +177,12 @@ cc_library {
     srcs: [
         "CallStack.cpp",
     ],
+
+    arch: {
+        mips: {
+            cflags: ["-DALIGN_DOUBLE"],
+        },
+    },
 
     shared_libs: [
          "libutils",
