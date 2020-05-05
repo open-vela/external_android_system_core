@@ -33,7 +33,6 @@ cc_library_headers {
         "//apex_available:platform",
         "//apex_available:anyapex",
     ],
-    min_sdk_version: "29",
     native_bridge_supported: true,
     export_include_dirs: ["include"],
     target: {
@@ -60,7 +59,6 @@ cc_library {
         "//apex_available:platform",
         "//apex_available:anyapex",
     ],
-    min_sdk_version: "29",
 
     export_include_dirs: ["include"],
 
@@ -144,7 +142,6 @@ cc_library {
         "//apex_available:platform",
         "//apex_available:anyapex",
     ],
-    min_sdk_version: "29",
     native_bridge_supported: true,
     srcs: [
         "config_utils.cpp",
