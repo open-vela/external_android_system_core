@@ -22,7 +22,6 @@ cc_library_headers {
         "//apex_available:platform",
         "//apex_available:anyapex",
     ],
-    min_sdk_version: "apex_inherit",
 
     header_libs: [
         "liblog_headers",
@@ -78,6 +77,12 @@ cc_defaults {
         "libcutils",
         "liblog",
     ],
+
+    arch: {
+        mips: {
+            cflags: ["-DALIGN_DOUBLE"],
+        },
+    },
 
     target: {
         android: {
@@ -163,7 +168,6 @@ cc_library {
         "//apex_available:anyapex",
         "//apex_available:platform",
     ],
-    min_sdk_version: "apex_inherit",
 }
 
 cc_library {
@@ -173,6 +177,12 @@ cc_library {
     srcs: [
         "CallStack.cpp",
     ],
+
+    arch: {
+        mips: {
+            cflags: ["-DALIGN_DOUBLE"],
+        },
+    },
 
     shared_libs: [
          "libutils",
