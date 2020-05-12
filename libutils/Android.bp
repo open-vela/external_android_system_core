@@ -22,7 +22,6 @@ cc_library_headers {
         "//apex_available:platform",
         "//apex_available:anyapex",
     ],
-    min_sdk_version: "apex_inherit",
 
     header_libs: [
         "liblog_headers",
@@ -163,7 +162,6 @@ cc_library {
         "//apex_available:anyapex",
         "//apex_available:platform",
     ],
-    min_sdk_version: "apex_inherit",
 }
 
 cc_library {
