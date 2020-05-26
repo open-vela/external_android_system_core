@@ -25,7 +25,6 @@
 extern "C" {
 #endif
 
-#include <stddef.h>
 
 typedef struct RecordStream RecordStream;
 

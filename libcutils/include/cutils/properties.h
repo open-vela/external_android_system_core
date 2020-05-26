@@ -43,7 +43,12 @@ extern "C" {
 ** If the property read fails or returns an empty value, the default
 ** value is used (if nonnull).
 */
-int property_get(const char* key, char* value, const char* default_value);
+int property_get(const char *key, char *value, const char *default_value)
+/* Sometimes we use not-Bionic with this, so we need this check. */
+#if defined(__BIONIC_FORTIFY)
+        __overloadable __RENAME_CLANG(property_get)
+#endif
+        ;
 
 /* property_get_bool: returns the value of key coerced into a
 ** boolean. If the property is not set, then the default value is returned.
@@ -114,14 +119,26 @@ int property_list(void (*propfn)(const char *key, const char *value, void *cooki
 
 #if defined(__clang__)
 
-/* Some projects use -Weverything; diagnose_if is clang-specific. */
+/* Some projects use -Weverything; enable_if is clang-specific.
+** FIXME: This is marked used because we'll otherwise get complaints about an
+** unused static function. This is more robust than marking it unused, since
+** -Wused-but-marked-unused is a thing that will complain if this function is
+** actually used, thus making FORTIFY noisier when an error happens. It's going
+** to go away anyway during our FORTIFY cleanup.
+**/
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgcc-compat"
-int property_get(const char* key, char* value, const char* default_value)
-    __clang_error_if(__bos(value) != __BIONIC_FORTIFY_UNKNOWN_SIZE &&
-                         __bos(value) < PROPERTY_VALUE_MAX,
-                     __property_get_err_str);
+__BIONIC_ERROR_FUNCTION_VISIBILITY
+int property_get(const char *key, char *value, const char *default_value)
+        __overloadable
+        __enable_if(__bos(value) != __BIONIC_FORTIFY_UNKNOWN_SIZE &&
+                    __bos(value) < PROPERTY_VALUE_MAX, __property_get_err_str)
+        __errorattr(__property_get_err_str)
+        __attribute__((used));
 #pragma clang diagnostic pop
+
+/* No object size? No FORTIFY.
+*/
 
 #else /* defined(__clang__) */
 

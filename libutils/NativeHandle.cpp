@@ -20,7 +20,7 @@
 namespace android {
 
 sp<NativeHandle> NativeHandle::create(native_handle_t* handle, bool ownsHandle) {
-    return handle ? new NativeHandle(handle, ownsHandle) : nullptr;
+    return handle ? new NativeHandle(handle, ownsHandle) : NULL;
 }
 
 NativeHandle::NativeHandle(native_handle_t* handle, bool ownsHandle)
