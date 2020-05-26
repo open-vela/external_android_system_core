@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef ANDROID_ERRORS_H
-#define ANDROID_ERRORS_H
+#pragma once
 
-#include <sys/types.h>
 #include <errno.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include <string>
 
 namespace android {
 
-// use this type to return error codes
-#ifdef _WIN32
-typedef int         status_t;
-#else
-typedef int32_t     status_t;
-#endif
-
-/* the MS C runtime lacks a few error codes */
+/**
+ * The type used to return success/failure from frameworks APIs.
+ * See the anonymous enum below for valid values.
+ */
+typedef int32_t status_t;
 
 /*
  * Error codes. 
@@ -43,8 +41,8 @@ typedef int32_t     status_t;
 #endif
 
 enum {
-    OK                = 0,    // Everything's swell.
-    NO_ERROR          = 0,    // No errors.
+    OK                = 0,    // Preferred constant for checking success.
+    NO_ERROR          = OK,   // Deprecated synonym for `OK`. Prefer `OK` because it doesn't conflict with Windows.
 
     UNKNOWN_ERROR       = (-2147483647-1), // INT32_MIN value
 
@@ -75,14 +73,13 @@ enum {
     UNEXPECTED_NULL     = (UNKNOWN_ERROR + 8),
 };
 
+// Human readable name of error
+std::string statusToString(status_t status);
+
 // Restore define; enumeration is in "android" namespace, so the value defined
 // there won't work for Win32 code in a different namespace.
 #ifdef _WIN32
 # define NO_ERROR 0L
 #endif
 
-}; // namespace android
-    
-// ---------------------------------------------------------------------------
-    
-#endif // ANDROID_ERRORS_H
+}  // namespace android
