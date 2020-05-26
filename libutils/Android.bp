@@ -17,12 +17,6 @@ cc_library_headers {
     vendor_available: true,
     recovery_available: true,
     host_supported: true,
-    native_bridge_supported: true,
-    apex_available: [
-        "//apex_available:platform",
-        "//apex_available:anyapex",
-    ],
-    min_sdk_version: "apex_inherit",
 
     header_libs: [
         "liblog_headers",
@@ -79,6 +73,12 @@ cc_defaults {
         "liblog",
     ],
 
+    arch: {
+        mips: {
+            cflags: ["-DALIGN_DOUBLE"],
+        },
+    },
+
     target: {
         android: {
             cflags: ["-fvisibility=protected"],
@@ -121,10 +121,8 @@ cc_defaults {
 cc_library {
     name: "libutils",
     defaults: ["libutils_defaults"],
-    native_bridge_supported: true,
 
     srcs: [
-        "Errors.cpp",
         "FileMap.cpp",
         "JenkinsHash.cpp",
         "NativeHandle.cpp",
@@ -158,12 +156,6 @@ cc_library {
             ],
         },
     },
-
-    apex_available: [
-        "//apex_available:anyapex",
-        "//apex_available:platform",
-    ],
-    min_sdk_version: "apex_inherit",
 }
 
 cc_library {
@@ -174,9 +166,15 @@ cc_library {
         "CallStack.cpp",
     ],
 
+    arch: {
+        mips: {
+            cflags: ["-DALIGN_DOUBLE"],
+        },
+    },
+
     shared_libs: [
-        "libutils",
-        "libbacktrace",
+         "libutils",
+         "libbacktrace",
     ],
 
     target: {
@@ -194,45 +192,6 @@ cc_library {
     },
 }
 
-cc_defaults {
-    name: "libutils_fuzz_defaults",
-    host_supported: true,
-    shared_libs: [
-        "libutils",
-        "libbase",
-    ],
-}
-
-cc_fuzz {
-    name: "libutils_fuzz_bitset",
-    defaults: ["libutils_fuzz_defaults"],
-    srcs: ["BitSet_fuzz.cpp"],
-}
-
-cc_fuzz {
-    name: "libutils_fuzz_filemap",
-    defaults: ["libutils_fuzz_defaults"],
-    srcs: ["FileMap_fuzz.cpp"],
-}
-
-cc_fuzz {
-    name: "libutils_fuzz_string8",
-    defaults: ["libutils_fuzz_defaults"],
-    srcs: ["String8_fuzz.cpp"],
-}
-
-cc_fuzz {
-    name: "libutils_fuzz_string16",
-    defaults: ["libutils_fuzz_defaults"],
-    srcs: ["String16_fuzz.cpp"],
-}
-
-cc_fuzz {
-    name: "libutils_fuzz_vector",
-    defaults: ["libutils_fuzz_defaults"],
-    srcs: ["Vector_fuzz.cpp"],
-}
-
 cc_test {
     name: "libutils_test",
     host_supported: true,
@@ -244,9 +203,7 @@ cc_test {
         "Mutex_test.cpp",
         "SharedBuffer_test.cpp",
         "String8_test.cpp",
-        "String16_test.cpp",
         "StrongPointer_test.cpp",
-        "Timers_test.cpp",
         "Unicode_test.cpp",
         "Vector_test.cpp",
     ],
@@ -329,10 +286,4 @@ cc_test_library {
         "-Werror",
     ],
     shared_libs: ["libutils_test_singleton1"],
-}
-
-cc_benchmark {
-    name: "libutils_benchmark",
-    srcs: ["Vector_benchmark.cpp"],
-    shared_libs: ["libutils"],
 }
