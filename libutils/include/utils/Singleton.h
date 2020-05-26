@@ -39,6 +39,11 @@ namespace android {
 #pragma clang diagnostic ignored "-Wundefined-var-template"
 #endif
 
+// DO NOT USE: Please use scoped static initialization. For instance:
+//     MyClass& getInstance() {
+//         static MyClass gInstance(...);
+//         return gInstance;
+//     }
 template <typename TYPE>
 class ANDROID_API Singleton
 {
@@ -46,7 +51,7 @@ public:
     static TYPE& getInstance() {
         Mutex::Autolock _l(sLock);
         TYPE* instance = sInstance;
-        if (instance == 0) {
+        if (instance == nullptr) {
             instance = new TYPE();
             sInstance = instance;
         }
@@ -55,7 +60,7 @@ public:
 
     static bool hasInstance() {
         Mutex::Autolock _l(sLock);
-        return sInstance != 0;
+        return sInstance != nullptr;
     }
     
 protected:
@@ -85,12 +90,12 @@ private:
 #define ANDROID_SINGLETON_STATIC_INSTANCE(TYPE)                 \
     template<> ::android::Mutex  \
         (::android::Singleton< TYPE >::sLock)(::android::Mutex::PRIVATE);  \
-    template<> TYPE* ::android::Singleton< TYPE >::sInstance(0);  \
+    template<> TYPE* ::android::Singleton< TYPE >::sInstance(nullptr);  /* NOLINT */ \
     template class ::android::Singleton< TYPE >;
 
 
 // ---------------------------------------------------------------------------
-}; // namespace android
+}  // namespace android
 
 #endif // ANDROID_UTILS_SINGLETON_H
 
