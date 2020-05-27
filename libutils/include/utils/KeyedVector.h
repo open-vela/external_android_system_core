@@ -30,8 +30,6 @@
 
 namespace android {
 
-// DO NOT USE: please use std::map
-
 template <typename KEY, typename VALUE>
 class KeyedVector
 {
@@ -211,7 +209,7 @@ const VALUE& DefaultKeyedVector<KEY,VALUE>::valueFor(const KEY& key) const {
     return i >= 0 ? KeyedVector<KEY,VALUE>::valueAt(i) : mDefault;
 }
 
-}  // namespace android
+}; // namespace android
 
 // ---------------------------------------------------------------------------
 

@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef _CANNED_FS_CONFIG_H
+#define _CANNED_FS_CONFIG_H
 
 #include <inttypes.h>
-#include <sys/cdefs.h>
-
-__BEGIN_DECLS
 
 int load_canned_fs_config(const char* fn);
 void canned_fs_config(const char* path, int dir, const char* target_out_path, unsigned* uid,
                       unsigned* gid, unsigned* mode, uint64_t* capabilities);
 
-__END_DECLS
+#endif
