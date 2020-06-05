@@ -37,7 +37,7 @@
 // Both adb (1) and Chrome (2) purposefully avoid WSACleanup() with no issues.
 // (1) https://android.googlesource.com/platform/system/core.git/+/master/adb/sysdeps_win32.cpp
 // (2) https://code.google.com/p/chromium/codesearch#chromium/src/net/base/winsock_init.cc
-extern "C" bool initialize_windows_sockets() {
+bool initialize_windows_sockets() {
     // There's no harm in calling WSAStartup() multiple times but no benefit
     // either, we may as well skip it after the first.
     static bool init_success = false;
@@ -52,11 +52,6 @@ extern "C" bool initialize_windows_sockets() {
 
 int socket_close(cutils_socket_t sock) {
     return closesocket(sock);
-}
-
-int socket_set_receive_timeout(cutils_socket_t sock, int timeout_ms) {
-    return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO,
-                      reinterpret_cast<char*>(&timeout_ms), sizeof(timeout_ms));
 }
 
 ssize_t socket_send_buffers(cutils_socket_t sock,
@@ -85,6 +80,6 @@ ssize_t socket_send_buffers(cutils_socket_t sock,
     return -1;
 }
 
-int android_get_control_socket(const char* name) {
+int android_get_control_socket(const char*) {
     return -1;
 }

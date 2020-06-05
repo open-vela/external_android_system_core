@@ -102,7 +102,12 @@ private:
         // Must be sized to preserve correct alignment.
         mutable std::atomic<int32_t>        mRefs;
                 size_t                      mSize;
-                uint32_t                    mReserved[2];
+                uint32_t                    mReserved;
+public:
+        // mClientMetadata is reserved for client use.  It is initialized to 0
+        // and the clients can do whatever they want with it.  Note that this is
+        // placed last so that it is adjcent to the buffer allocated.
+                uint32_t                    mClientMetadata;
 };
 
 static_assert(sizeof(SharedBuffer) % 8 == 0
@@ -124,11 +129,11 @@ size_t SharedBuffer::size() const {
 }
 
 SharedBuffer* SharedBuffer::bufferFromData(void* data) {
-    return data ? static_cast<SharedBuffer *>(data)-1 : 0;
+    return data ? static_cast<SharedBuffer *>(data)-1 : nullptr;
 }
     
 const SharedBuffer* SharedBuffer::bufferFromData(const void* data) {
-    return data ? static_cast<const SharedBuffer *>(data)-1 : 0;
+    return data ? static_cast<const SharedBuffer *>(data)-1 : nullptr;
 }
 
 size_t SharedBuffer::sizeFromData(const void* data) {
@@ -139,7 +144,7 @@ bool SharedBuffer::onlyOwner() const {
     return (mRefs.load(std::memory_order_acquire) == 1);
 }
 
-}; // namespace android
+}  // namespace android
 
 // ---------------------------------------------------------------------------
 
