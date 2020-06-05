@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef __CUTILS_SOCKETS_H
-#define __CUTILS_SOCKETS_H
+#pragma once
 
 #include <errno.h>
 #include <limits.h>
@@ -88,8 +87,6 @@ int android_get_control_socket(const char* name);
 cutils_socket_t socket_network_client(const char* host, int port, int type);
 int socket_network_client_timeout(const char* host, int port, int type,
                                   int timeout, int* getaddrinfo_error);
-int socket_loopback_server(int port, int type);
-int socket_loopback_server6(int port, int type);
 int socket_local_server(const char* name, int namespaceId, int type);
 int socket_local_server_bind(int s, const char* name, int namespaceId);
 int socket_local_client_connect(int fd, const char *name, int namespaceId,
@@ -104,14 +101,6 @@ cutils_socket_t socket_inaddr_any_server(int port, int type);
  * Returns 0 on success.
  */
 int socket_close(cutils_socket_t sock);
-
-/*
- * Sets socket receive timeout using SO_RCVTIMEO. Setting |timeout_ms| to 0
- * disables receive timeouts.
- *
- * Return 0 on success.
- */
-int socket_set_receive_timeout(cutils_socket_t sock, int timeout_ms);
 
 /*
  * Returns the local port the socket is bound to or -1 on error.
@@ -143,19 +132,6 @@ ssize_t socket_send_buffers(cutils_socket_t sock,
                             const cutils_socket_buffer_t* buffers,
                             size_t num_buffers);
 
-/*
- * socket_peer_is_trusted - Takes a socket which is presumed to be a
- * connected local socket (e.g. AF_LOCAL) and returns whether the peer
- * (the userid that owns the process on the other end of that socket)
- * is one of the two trusted userids, root or shell.
- *
- * Note: This only works as advertised on the Android OS and always
- * just returns true when called on other operating systems.
- */
-extern bool socket_peer_is_trusted(int fd);
-
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* __CUTILS_SOCKETS_H */
