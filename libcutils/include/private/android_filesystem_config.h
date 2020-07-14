@@ -34,7 +34,14 @@
  * partition, from which the system reads passwd and group files.
  */
 
-#pragma once
+#ifndef _ANDROID_FILESYSTEM_CONFIG_H_
+#define _ANDROID_FILESYSTEM_CONFIG_H_
+
+#include <sys/types.h>
+
+#if !defined(__ANDROID_VNDK__) && !defined(EXCLUDE_FS_CONFIG_STRUCTURES)
+#include <private/fs_config.h>
+#endif
 
 /* This is the master Users and Groups config for the platform.
  * DO NOT EVER RENUMBER
@@ -217,3 +224,5 @@
  * documented at the top of this header file.
  * Also see build/tools/fs_config for more details.
  */
+
+#endif
