@@ -152,7 +152,6 @@ cc_library {
         "iosched_policy.cpp",
         "load_file.cpp",
         "native_handle.cpp",
-        "properties.cpp",
         "record_stream.cpp",
         "strlcpy.c",
         "threads.cpp",
@@ -188,6 +187,7 @@ cc_library {
                 "fs_config.cpp",
                 "klog.cpp",
                 "partition_utils.cpp",
+                "properties.cpp",
                 "qtaguid.cpp",
                 "trace-dev.cpp",
                 "uevent.cpp",
@@ -195,23 +195,17 @@ cc_library {
         },
 
         android_arm: {
-            srcs: ["arch-arm/memset32.S"],
             sanitize: {
                 misc_undefined: ["integer"],
             },
         },
         android_arm64: {
-            srcs: ["arch-arm64/android_memset.S"],
             sanitize: {
                 misc_undefined: ["integer"],
             },
         },
 
         android_x86: {
-            srcs: [
-                "arch-x86/android_memset16.S",
-                "arch-x86/android_memset32.S",
-            ],
             // TODO: This is to work around b/29412086.
             // Remove once __mulodi4 is available and move the "sanitize" block
             // to the android target.
@@ -221,10 +215,6 @@ cc_library {
         },
 
         android_x86_64: {
-            srcs: [
-                "arch-x86_64/android_memset16.S",
-                "arch-x86_64/android_memset32.S",
-            ],
             sanitize: {
                 misc_undefined: ["integer"],
             },
@@ -268,7 +258,6 @@ cc_defaults {
     name: "libcutils_test_default",
     srcs: [
         "native_handle_test.cpp",
-        "properties_test.cpp",
         "sockets_test.cpp",
     ],
 
@@ -279,8 +268,8 @@ cc_defaults {
                 "android_get_control_socket_test.cpp",
                 "ashmem_test.cpp",
                 "fs_config_test.cpp",
-                "memset_test.cpp",
                 "multiuser_test.cpp",
+                "properties_test.cpp",
                 "sched_policy_test.cpp",
                 "str_parms_test.cpp",
                 "trace-dev_test.cpp",
