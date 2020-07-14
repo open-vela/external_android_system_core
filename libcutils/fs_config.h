@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (C) 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,22 @@
 
 #pragma once
 
-#include <stddef.h>
+#include <stdint.h>
 
-#if defined(__BIONIC__)
-#include <linux/ashmem.h>
-#endif
+// Binary format for the runtime <partition>/etc/fs_config_(dirs|files) filesystem override files.
+struct fs_path_config_from_file {
+    uint16_t len;
+    uint16_t mode;
+    uint16_t uid;
+    uint16_t gid;
+    uint64_t capabilities;
+    char prefix[];
+} __attribute__((__aligned__(sizeof(uint64_t))));
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int ashmem_valid(int fd);
-int ashmem_create_region(const char *name, size_t size);
-int ashmem_set_prot_region(int fd, int prot);
-int ashmem_pin_region(int fd, size_t offset, size_t len);
-int ashmem_unpin_region(int fd, size_t offset, size_t len);
-int ashmem_get_size_region(int fd);
-
-#ifdef __cplusplus
-}
-#endif
+struct fs_path_config {
+    unsigned mode;
+    unsigned uid;
+    unsigned gid;
+    uint64_t capabilities;
+    const char* prefix;
+};
