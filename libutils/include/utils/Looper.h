@@ -24,10 +24,6 @@
 
 #include <sys/epoll.h>
 
-#include <android-base/unique_fd.h>
-
-#include <utility>
-
 namespace android {
 
 /*
@@ -266,7 +262,7 @@ public:
      */
     int pollOnce(int timeoutMillis, int* outFd, int* outEvents, void** outData);
     inline int pollOnce(int timeoutMillis) {
-        return pollOnce(timeoutMillis, nullptr, nullptr, nullptr);
+        return pollOnce(timeoutMillis, NULL, NULL, NULL);
     }
 
     /**
@@ -276,7 +272,7 @@ public:
      */
     int pollAll(int timeoutMillis, int* outFd, int* outEvents, void** outData);
     inline int pollAll(int timeoutMillis) {
-        return pollAll(timeoutMillis, nullptr, nullptr, nullptr);
+        return pollAll(timeoutMillis, NULL, NULL, NULL);
     }
 
     /**
@@ -440,8 +436,9 @@ private:
     struct MessageEnvelope {
         MessageEnvelope() : uptime(0) { }
 
-        MessageEnvelope(nsecs_t u, sp<MessageHandler> h, const Message& m)
-            : uptime(u), handler(std::move(h)), message(m) {}
+        MessageEnvelope(nsecs_t u, const sp<MessageHandler> h,
+                const Message& m) : uptime(u), handler(h), message(m) {
+        }
 
         nsecs_t uptime;
         sp<MessageHandler> handler;
@@ -450,7 +447,7 @@ private:
 
     const bool mAllowNonCallbacks; // immutable
 
-    android::base::unique_fd mWakeEventFd;  // immutable
+    int mWakeEventFd;  // immutable
     Mutex mLock;
 
     Vector<MessageEnvelope> mMessageEnvelopes; // guarded by mLock
@@ -460,7 +457,7 @@ private:
     // any use of it is racy anyway.
     volatile bool mPolling;
 
-    android::base::unique_fd mEpollFd;  // guarded by mLock but only modified on the looper thread
+    int mEpollFd; // guarded by mLock but only modified on the looper thread
     bool mEpollRebuildRequired; // guarded by mLock
 
     // Locked list of file descriptor monitoring requests.
