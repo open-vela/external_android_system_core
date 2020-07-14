@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
+#include <cutils/sockets.h>
+
 #include <errno.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <cutils/sockets.h>
 
 #if defined(_WIN32)
 
@@ -38,8 +38,6 @@ int socket_local_client(const char *name, int namespaceId, int type)
 #include <sys/types.h>
 
 #include "socket_local_unix.h"
-
-#define UNUSED __attribute__((unused))
 
 #define LISTEN_BACKLOG 4
 
@@ -123,9 +121,7 @@ error:
  * 
  * Used by AndroidSocketImpl
  */
-int socket_local_client_connect(int fd, const char *name, int namespaceId, 
-        int type UNUSED)
-{
+int socket_local_client_connect(int fd, const char* name, int namespaceId, int /*type*/) {
     struct sockaddr_un addr;
     socklen_t alen;
     int err;
