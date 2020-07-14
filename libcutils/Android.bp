@@ -50,6 +50,10 @@ cc_library_headers {
 cc_library {
     name: "libcutils",
     vendor_available: true,
+    vndk: {
+        enabled: true,
+        support_system_process: true,
+    },
     host_supported: true,
     srcs: [
         "config_utils.c",
@@ -150,6 +154,7 @@ cc_library {
         "libutils_headers",
     ],
     export_header_lib_headers: ["libcutils_headers"],
+    local_include_dirs: ["include"],
 
     cflags: [
         "-Werror",
