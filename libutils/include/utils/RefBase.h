@@ -188,9 +188,6 @@
 // ---------------------------------------------------------------------------
 namespace android {
 
-class TextOutput;
-TextOutput& printWeakPointer(TextOutput& to, const void* val);
-
 // ---------------------------------------------------------------------------
 
 #define COMPARE_WEAK(_op_)                                      \
@@ -299,9 +296,12 @@ public:
         getWeakRefs()->trackMe(enable, retain); 
     }
 
-    typedef RefBase basetype;
-
 protected:
+    // When constructing these objects, prefer using sp::make<>. Using a RefBase
+    // object on the stack or with other refcount mechanisms (e.g.
+    // std::shared_ptr) is inherently wrong. RefBase types have an implicit
+    // ownership model and cannot be safely used with other ownership models.
+
                             RefBase();
     virtual                 ~RefBase();
     
@@ -459,10 +459,8 @@ private:
     weakref_type*   m_refs;
 };
 
-template <typename T>
-TextOutput& operator<<(TextOutput& to, const wp<T>& val);
-
 #undef COMPARE_WEAK
+#undef COMPARE_WEAK_FUNCTIONAL
 
 // ---------------------------------------------------------------------------
 // No user serviceable parts below here.
@@ -633,12 +631,6 @@ void wp<T>::clear()
         m_refs = 0;
         m_ptr = 0;
     }
-}
-
-template <typename T>
-inline TextOutput& operator<<(TextOutput& to, const wp<T>& val)
-{
-    return printWeakPointer(to, val.unsafe_get());
 }
 
 // ---------------------------------------------------------------------------
