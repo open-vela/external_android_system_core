@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 The Android Open Source Project
+ * Copyright (C) 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,14 @@
  * limitations under the License.
  */
 
-#pragma once
+#include <cutils/native_handle.h>
 
-#include <stdint.h>
-#include <sys/types.h>
+#include <gtest/gtest.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+TEST(native_handle, native_handle_delete) {
+    ASSERT_EQ(0, native_handle_delete(nullptr));
+}
 
-#if defined(__GLIBC__) || defined(_WIN32)
-/* Declaration of strlcpy() for platforms that don't already have it. */
-size_t strlcpy(char *dst, const char *src, size_t size);
-#endif
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
+TEST(native_handle, native_handle_close) {
+    ASSERT_EQ(0, native_handle_close(nullptr));
+}
