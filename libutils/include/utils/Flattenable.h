@@ -33,13 +33,13 @@ class FlattenableUtils {
 public:
     template<size_t N>
     static size_t align(size_t size) {
-        COMPILE_TIME_ASSERT_FUNCTION_SCOPE( !(N & (N-1)) );
+        static_assert(!(N & (N - 1)), "Can only align to a power of 2.");
         return (size + (N-1)) & ~(N-1);
     }
 
     template<size_t N>
     static size_t align(void const*& buffer) {
-        COMPILE_TIME_ASSERT_FUNCTION_SCOPE( !(N & (N-1)) );
+        static_assert(!(N & (N - 1)), "Can only align to a power of 2.");
         uintptr_t b = uintptr_t(buffer);
         buffer = reinterpret_cast<void*>((uintptr_t(buffer) + (N-1)) & ~(N-1));
         return size_t(uintptr_t(buffer) - b);
@@ -195,16 +195,14 @@ public:
     inline status_t flatten(void* buffer, size_t size) const {
         if (size < sizeof(T)) return NO_MEMORY;
         memcpy(buffer, static_cast<T const*>(this), sizeof(T));
-        return NO_ERROR;
+        return OK;
     }
     inline status_t unflatten(void const* buffer, size_t) {
         memcpy(static_cast<T*>(this), buffer, sizeof(T));
-        return NO_ERROR;
+        return OK;
     }
 };
 
-
-}; // namespace android
-
+}  // namespace android
 
 #endif /* ANDROID_UTILS_FLATTENABLE_H */

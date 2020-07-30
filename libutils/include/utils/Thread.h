@@ -36,6 +36,8 @@
 namespace android {
 // ---------------------------------------------------------------------------
 
+// DO NOT USE: please use std::thread
+
 class Thread : virtual public RefBase
 {
 public:
@@ -45,6 +47,7 @@ public:
     virtual             ~Thread();
 
     // Start the thread in threadLoop() which needs to be implemented.
+    // NOLINTNEXTLINE(google-default-arguments)
     virtual status_t    run(    const char* name,
                                 int32_t priority = PRIORITY_DEFAULT,
                                 size_t stack = 0);
@@ -108,8 +111,7 @@ private:
 #endif
 };
 
-
-}; // namespace android
+}  // namespace android
 
 // ---------------------------------------------------------------------------
 #endif // _LIBS_UTILS_THREAD_H
