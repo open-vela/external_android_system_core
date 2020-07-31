@@ -14,7 +14,7 @@
 ** limitations under the License.
 */
 
-#include "cutils/threads.h"
+#include <cutils/threads.h>
 
 // For gettid.
 #if defined(__APPLE__)
@@ -35,7 +35,9 @@
 #ifndef __ANDROID__
 pid_t gettid() {
 #if defined(__APPLE__)
-  return syscall(SYS_thread_selfid);
+  uint64_t tid;
+  pthread_threadid_np(NULL, &tid);
+  return tid;
 #elif defined(__linux__)
   return syscall(__NR_gettid);
 #elif defined(_WIN32)
@@ -82,7 +84,7 @@ void*  thread_store_get( thread_store_t*  store )
 
 void   thread_store_set( thread_store_t*          store,
                          void*                    value,
-                         thread_store_destruct_t  destroy )
+                         thread_store_destruct_t  /*destroy*/ )
 {
     /* XXX: can't use destructor on thread exit */
     if (!store->lock_init) {
