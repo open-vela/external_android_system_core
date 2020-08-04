@@ -29,18 +29,21 @@ namespace android {
 class StopWatch
 {
 public:
-  StopWatch(const char* name, int clock = SYSTEM_TIME_MONOTONIC);
-  ~StopWatch();
+        StopWatch(  const char *name,
+                    int clock = SYSTEM_TIME_MONOTONIC,
+                    uint32_t flags = 0);
+        ~StopWatch();
+        
+        const char* name() const;
+        nsecs_t     lap();
+        nsecs_t     elapsedTime() const;
 
-  const char* name() const;
-  nsecs_t lap();
-  nsecs_t elapsedTime() const;
-
-  void reset();
-
+        void        reset();
+        
 private:
     const char*     mName;
     int             mClock;
+    uint32_t        mFlags;
     
     struct lap_t {
         nsecs_t     soFar;
@@ -52,7 +55,9 @@ private:
     int             mNumLaps;
 };
 
-}  // namespace android
+
+}; // namespace android
+
 
 // ---------------------------------------------------------------------------
 
