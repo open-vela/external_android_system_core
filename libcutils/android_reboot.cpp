@@ -13,20 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#include <cutils/android_reboot.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <cutils/android_reboot.h>
 #include <cutils/properties.h>
 
 #define TAG "android_reboot"
 
-int android_reboot(int cmd, int flags __unused, const char* arg) {
+int android_reboot(int cmd, int /*flags*/, const char* arg) {
     int ret;
     const char* restart_cmd = NULL;
     char* prop_value;
 
-    switch (cmd) {
+    switch (static_cast<unsigned>(cmd)) {
         case ANDROID_RB_RESTART:  // deprecated
         case ANDROID_RB_RESTART2:
             restart_cmd = "reboot";
@@ -35,11 +37,11 @@ int android_reboot(int cmd, int flags __unused, const char* arg) {
             restart_cmd = "shutdown";
             break;
         case ANDROID_RB_THERMOFF:
-            restart_cmd = "thermal-shutdown";
+            restart_cmd = "shutdown,thermal";
             break;
     }
     if (!restart_cmd) return -1;
-    if (arg) {
+    if (arg && arg[0]) {
         ret = asprintf(&prop_value, "%s,%s", restart_cmd, arg);
     } else {
         ret = asprintf(&prop_value, "%s", restart_cmd);
