@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <cutils/ashmem.h>
+
 /*
  * Implementation of the user-space ashmem API for devices, which have our
  * ashmem-enabled kernel. See ashmem-sim.c for the "fake" tmp-based version,
@@ -31,8 +33,6 @@
 #include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-#include <cutils/ashmem.h>
 #include <log/log.h>
 
 #define ASHMEM_DEVICE "/dev/ashmem"
@@ -51,7 +51,7 @@ static int __ashmem_open_locked()
     int ret;
     struct stat st;
 
-    int fd = TEMP_FAILURE_RETRY(open(ASHMEM_DEVICE, O_RDWR));
+    int fd = TEMP_FAILURE_RETRY(open(ASHMEM_DEVICE, O_RDWR | O_CLOEXEC));
     if (fd < 0) {
         return fd;
     }
@@ -192,7 +192,8 @@ int ashmem_set_prot_region(int fd, int prot)
 
 int ashmem_pin_region(int fd, size_t offset, size_t len)
 {
-    struct ashmem_pin pin = { offset, len };
+    // TODO: should LP64 reject too-large offset/len?
+    ashmem_pin pin = { static_cast<uint32_t>(offset), static_cast<uint32_t>(len) };
 
     int ret = __ashmem_is_ashmem(fd, 1);
     if (ret < 0) {
@@ -204,7 +205,8 @@ int ashmem_pin_region(int fd, size_t offset, size_t len)
 
 int ashmem_unpin_region(int fd, size_t offset, size_t len)
 {
-    struct ashmem_pin pin = { offset, len };
+    // TODO: should LP64 reject too-large offset/len?
+    ashmem_pin pin = { static_cast<uint32_t>(offset), static_cast<uint32_t>(len) };
 
     int ret = __ashmem_is_ashmem(fd, 1);
     if (ret < 0) {
