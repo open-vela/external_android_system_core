@@ -41,7 +41,6 @@ SharedBuffer* SharedBuffer::alloc(size_t size)
         // The following is OK on Android-supported platforms.
         sb->mRefs.store(1, std::memory_order_relaxed);
         sb->mSize = size;
-        sb->mClientMetadata = 0;
     }
     return sb;
 }
@@ -76,7 +75,7 @@ SharedBuffer* SharedBuffer::editResize(size_t newSize) const
                             "Invalid buffer size %zu", newSize);
 
         buf = (SharedBuffer*)realloc(buf, sizeof(SharedBuffer) + newSize);
-        if (buf != nullptr) {
+        if (buf != NULL) {
             buf->mSize = newSize;
             return buf;
         }
@@ -95,7 +94,7 @@ SharedBuffer* SharedBuffer::attemptEdit() const
     if (onlyOwner()) {
         return const_cast<SharedBuffer*>(this);
     }
-    return nullptr;
+    return 0;
 }
 
 SharedBuffer* SharedBuffer::reset(size_t new_size) const
