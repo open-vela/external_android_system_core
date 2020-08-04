@@ -53,7 +53,7 @@
 #include <sys/cdefs.h>
 #include <sys/types.h>
 
-#if defined(__ANDROID__)
+#if defined(__BIONIC__)
 #include <linux/capability.h>
 #else
 #include "android_filesystem_capability.h"
@@ -130,6 +130,7 @@
 #define AID_MEDIA_OBB 1059       /* GID for OBB files on internal media storage */
 #define AID_ESE 1060             /* embedded secure element (eSE) subsystem */
 #define AID_OTA_UPDATE 1061      /* resource tracking UID for OTA updates */
+#define AID_AUTOMOTIVE_EVS 1062  /* Automotive rear and surround view system */
 /* Changes to this file must be made in AOSP, *not* in internal branches. */
 
 #define AID_SHELL 2000 /* adb and debug shell user */
@@ -152,6 +153,7 @@
 #define AID_NET_BW_ACCT 3007  /* change bandwidth statistics accounting */
 #define AID_READPROC 3009     /* Allow /proc read access */
 #define AID_WAKELOCK 3010     /* Allow system wakelock read/write access */
+#define AID_UHID 3011         /* Allow read/write to /dev/uhid node */
 
 /* The range 5000-5999 is also reserved for OEM, and must never be used here. */
 #define AID_OEM_RESERVED_2_START 5000

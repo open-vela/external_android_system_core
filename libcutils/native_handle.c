@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "NativeHandle"
+#include <cutils/native_handle.h>
 
 #include <errno.h>
 #include <stdint.h>
@@ -22,12 +22,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <android/log.h>
-#include <cutils/native_handle.h>
-
-native_handle_t* native_handle_init(char* storage, int numFds, int numInts)
-{
+native_handle_t* native_handle_init(char* storage, int numFds, int numInts) {
     if ((uintptr_t) storage % alignof(native_handle_t)) {
+        errno = EINVAL;
         return NULL;
     }
 
@@ -35,14 +32,13 @@ native_handle_t* native_handle_init(char* storage, int numFds, int numInts)
     handle->version = sizeof(native_handle_t);
     handle->numFds = numFds;
     handle->numInts = numInts;
-
     return handle;
 }
 
-native_handle_t* native_handle_create(int numFds, int numInts)
-{
+native_handle_t* native_handle_create(int numFds, int numInts) {
     if (numFds < 0 || numInts < 0 || numFds > NATIVE_HANDLE_MAX_FDS ||
         numInts > NATIVE_HANDLE_MAX_INTS) {
+        errno = EINVAL;
         return NULL;
     }
 
@@ -56,14 +52,13 @@ native_handle_t* native_handle_create(int numFds, int numInts)
     return h;
 }
 
-native_handle_t* native_handle_clone(const native_handle_t* handle)
-{
+native_handle_t* native_handle_clone(const native_handle_t* handle) {
     native_handle_t* clone = native_handle_create(handle->numFds, handle->numInts);
-    int i;
+    if (clone == NULL) return NULL;
 
-    for (i = 0; i < handle->numFds; i++) {
+    for (int i = 0; i < handle->numFds; i++) {
         clone->data[i] = dup(handle->data[i]);
-        if (clone->data[i] < 0) {
+        if (clone->data[i] == -1) {
             clone->numFds = i;
             native_handle_close(clone);
             native_handle_delete(clone);
@@ -72,30 +67,27 @@ native_handle_t* native_handle_clone(const native_handle_t* handle)
     }
 
     memcpy(&clone->data[handle->numFds], &handle->data[handle->numFds],
-            sizeof(int) * handle->numInts);
+           sizeof(int) * handle->numInts);
 
     return clone;
 }
 
-int native_handle_delete(native_handle_t* h)
-{
+int native_handle_delete(native_handle_t* h) {
     if (h) {
-        if (h->version != sizeof(native_handle_t))
-            return -EINVAL;
+        if (h->version != sizeof(native_handle_t)) return -EINVAL;
         free(h);
     }
     return 0;
 }
 
-int native_handle_close(const native_handle_t* h)
-{
-    if (h->version != sizeof(native_handle_t))
-        return -EINVAL;
+int native_handle_close(const native_handle_t* h) {
+    if (h->version != sizeof(native_handle_t)) return -EINVAL;
 
+    int saved_errno = errno;
     const int numFds = h->numFds;
-    int i;
-    for (i=0 ; i<numFds ; i++) {
+    for (int i = 0; i < numFds; ++i) {
         close(h->data[i]);
     }
+    errno = saved_errno;
     return 0;
 }
