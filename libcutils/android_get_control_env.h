@@ -14,13 +14,20 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef __CUTILS_ANDROID_GET_CONTROL_ENV_H
+#define __CUTILS_ANDROID_GET_CONTROL_ENV_H
 
-#include <sys/cdefs.h>
+/* To declare library function hidden and internal */
+#define LIBCUTILS_HIDDEN __attribute__((visibility("hidden")))
 
-__BEGIN_DECLS
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-int __android_get_control_from_env(const char* prefix, const char* name)
-        __attribute__((visibility("hidden")));
+LIBCUTILS_HIDDEN int __android_get_control_from_env(const char* prefix,
+                                                    const char* name);
+#ifdef __cplusplus
+}
+#endif
 
-__END_DECLS
+#endif /* __CUTILS_ANDROID_GET_CONTROL_ENV_H */
