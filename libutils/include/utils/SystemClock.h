@@ -23,10 +23,11 @@
 namespace android {
 
 int64_t uptimeMillis();
+int64_t uptimeNanos();
 int64_t elapsedRealtime();
 int64_t elapsedRealtimeNano();
 
-}; // namespace android
+}  // namespace android
 
 #endif // ANDROID_UTILS_SYSTEMCLOCK_H
 

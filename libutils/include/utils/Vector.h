@@ -23,15 +23,13 @@
 #include <log/log.h>
 #include <utils/TypeHelpers.h>
 #include <utils/VectorImpl.h>
-
-/*
- * Used to blacklist some functions from CFI.
- *
- */
 #ifndef __has_attribute
 #define __has_attribute(x) 0
 #endif
 
+/*
+ * Used to exclude some functions from CFI.
+ */
 #if __has_attribute(no_sanitize)
 #define UTILS_VECTOR_NO_CFI __attribute__((no_sanitize("cfi")))
 #else
@@ -49,6 +47,8 @@ class SortedVector;
  * The main templated vector class ensuring type safety
  * while making use of VectorImpl.
  * This is the class users want to use.
+ *
+ * DO NOT USE: please use std::vector
  */
 
 template <class TYPE>
@@ -423,8 +423,7 @@ UTILS_VECTOR_NO_CFI void Vector<TYPE>::do_move_backward(void* dest, const void* 
     move_backward_type( reinterpret_cast<TYPE*>(dest), reinterpret_cast<const TYPE*>(from), num );
 }
 
-}; // namespace android
-
+}  // namespace android
 
 // ---------------------------------------------------------------------------
 
