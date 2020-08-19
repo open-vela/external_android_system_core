@@ -47,8 +47,6 @@ public:
         return mCount.load(std::memory_order_relaxed);
     }
 
-    typedef LightRefBase<T> basetype;
-
 protected:
     inline ~LightRefBase() { }
 
@@ -69,4 +67,4 @@ public:
     virtual ~VirtualLightRefBase() = default;
 };
 
-}; // namespace android
+}  // namespace android
