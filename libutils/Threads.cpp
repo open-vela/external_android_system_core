@@ -18,8 +18,8 @@
 #define LOG_TAG "libutils.threads"
 
 #include <assert.h>
-#include <utils/AndroidThreads.h>
 #include <utils/Thread.h>
+#include <utils/AndroidThreads.h>
 
 #if !defined(_WIN32)
 # include <sys/resource.h>
@@ -36,10 +36,7 @@
 
 #include <utils/Log.h>
 
-#if defined(__ANDROID__)
-#include <processgroup/processgroup.h>
-#include <processgroup/sched_policy.h>
-#endif
+#include <cutils/sched_policy.h>
 
 #if defined(__ANDROID__)
 # define __android_unused
@@ -67,7 +64,6 @@ using namespace android;
 
 typedef void* (*android_pthread_entry)(void*);
 
-#if defined(__ANDROID__)
 struct thread_data_t {
     thread_func_t   entryFunction;
     void*           userData;
@@ -83,11 +79,10 @@ struct thread_data_t {
         char * name = t->threadName;
         delete t;
         setpriority(PRIO_PROCESS, 0, prio);
-
-        // A new thread will be in its parent's sched group by default,
-        // so we just need to handle the background case.
         if (prio >= ANDROID_PRIORITY_BACKGROUND) {
-            SetTaskProfiles(0, {"SCHED_SP_BACKGROUND"}, true);
+            set_sched_policy(0, SP_BACKGROUND);
+        } else {
+            set_sched_policy(0, SP_FOREGROUND);
         }
 
         if (name) {
@@ -97,7 +92,6 @@ struct thread_data_t {
         return f(u);
     }
 };
-#endif
 
 void androidSetThreadName(const char* name) {
 #if defined(__linux__)
@@ -169,7 +163,7 @@ int androidCreateRawThreadEtc(android_thread_func_t entryFunction,
     // Note that *threadID is directly available to the parent only, as it is
     // assigned after the child starts.  Use memory barrier / lock if the child
     // or other threads also need access.
-    if (threadId != nullptr) {
+    if (threadId != NULL) {
         *threadId = (android_thread_id_t)thread; // XXX: this is not portable
     }
     return 1;
@@ -302,29 +296,19 @@ void androidSetCreateThreadFunc(android_create_thread_fn func)
 }
 
 #if defined(__ANDROID__)
-namespace {
-int androidSetThreadPriorityInternal(pid_t tid, int pri, bool change_policy) {
+int androidSetThreadPriority(pid_t tid, int pri)
+{
     int rc = 0;
     int lasterr = 0;
-    int curr_pri = getpriority(PRIO_PROCESS, tid);
 
-    if (curr_pri == pri) {
-        return rc;
+    if (pri >= ANDROID_PRIORITY_BACKGROUND) {
+        rc = set_sched_policy(tid, SP_BACKGROUND);
+    } else if (getpriority(PRIO_PROCESS, tid) >= ANDROID_PRIORITY_BACKGROUND) {
+        rc = set_sched_policy(tid, SP_FOREGROUND);
     }
 
-    if (change_policy) {
-        if (pri >= ANDROID_PRIORITY_BACKGROUND) {
-            rc = SetTaskProfiles(tid, {"SCHED_SP_BACKGROUND"}, true) ? 0 : -1;
-        } else if (curr_pri >= ANDROID_PRIORITY_BACKGROUND) {
-            SchedPolicy policy = SP_FOREGROUND;
-            // Change to the sched policy group of the process.
-            get_sched_policy(getpid(), &policy);
-            rc = SetTaskProfiles(tid, {get_sched_policy_profile_name(policy)}, true) ? 0 : -1;
-        }
-
-        if (rc) {
-            lasterr = errno;
-        }
+    if (rc) {
+        lasterr = errno;
     }
 
     if (setpriority(PRIO_PROCESS, tid, pri) < 0) {
@@ -334,15 +318,6 @@ int androidSetThreadPriorityInternal(pid_t tid, int pri, bool change_policy) {
     }
 
     return rc;
-}
-}  // namespace
-
-int androidSetThreadPriority(pid_t tid, int pri) {
-    return androidSetThreadPriorityInternal(tid, pri, true);
-}
-
-int androidSetThreadPriorityAndPolicy(pid_t tid, int pri, bool change_policy) {
-    return androidSetThreadPriorityInternal(tid, pri, change_policy);
 }
 
 int androidGetThreadPriority(pid_t tid) {
@@ -373,7 +348,7 @@ Mutex::Mutex()
     mState = (void*) hMutex;
 }
 
-Mutex::Mutex(const char* /*name*/)
+Mutex::Mutex(const char* name)
 {
     // XXX: name not used for now
     HANDLE hMutex;
@@ -384,7 +359,7 @@ Mutex::Mutex(const char* /*name*/)
     mState = (void*) hMutex;
 }
 
-Mutex::Mutex(int /*type*/, const char* /*name*/)
+Mutex::Mutex(int type, const char* name)
 {
     // XXX: type and name not used for now
     HANDLE hMutex;
@@ -404,7 +379,7 @@ status_t Mutex::lock()
 {
     DWORD dwWaitResult;
     dwWaitResult = WaitForSingleObject((HANDLE) mState, INFINITE);
-    return dwWaitResult != WAIT_OBJECT_0 ? -1 : OK;
+    return dwWaitResult != WAIT_OBJECT_0 ? -1 : NO_ERROR;
 }
 
 void Mutex::unlock()
@@ -531,7 +506,7 @@ typedef struct WinCondition {
         ReleaseMutex(condState->internalMutex);
         WaitForSingleObject(hMutex, INFINITE);
 
-        return res == WAIT_OBJECT_0 ? OK : -1;
+        return res == WAIT_OBJECT_0 ? NO_ERROR : -1;
     }
 } WinCondition;
 
@@ -664,15 +639,13 @@ void Condition::broadcast()
  */
 
 Thread::Thread(bool canCallJava)
-    : mCanCallJava(canCallJava),
-      mThread(thread_id_t(-1)),
-      mLock("Thread::mLock"),
-      mStatus(OK),
-      mExitPending(false),
-      mRunning(false)
+    :   mCanCallJava(canCallJava),
+        mThread(thread_id_t(-1)),
+        mLock("Thread::mLock"),
+        mStatus(NO_ERROR),
+        mExitPending(false), mRunning(false)
 #if defined(__ANDROID__)
-      ,
-      mTid(-1)
+        , mTid(-1)
 #endif
 {
 }
@@ -683,7 +656,7 @@ Thread::~Thread()
 
 status_t Thread::readyToRun()
 {
-    return OK;
+    return NO_ERROR;
 }
 
 status_t Thread::run(const char* name, int32_t priority, size_t stack)
@@ -699,7 +672,7 @@ status_t Thread::run(const char* name, int32_t priority, size_t stack)
 
     // reset status and exitPending to their default value, so we can
     // try again after an error happened (either below, or in readyToRun())
-    mStatus = OK;
+    mStatus = NO_ERROR;
     mExitPending = false;
     mThread = thread_id_t(-1);
 
@@ -727,10 +700,10 @@ status_t Thread::run(const char* name, int32_t priority, size_t stack)
     }
 
     // Do not refer to mStatus here: The thread is already running (may, in fact
-    // already have exited with a valid mStatus result). The OK indication
+    // already have exited with a valid mStatus result). The NO_ERROR indication
     // here merely indicates successfully starting the thread and does not
     // imply successful termination/execution.
-    return OK;
+    return NO_ERROR;
 
     // Exiting scope of mLock is a memory barrier and allows new thread to run
 }
@@ -755,7 +728,7 @@ int Thread::_threadLoop(void* user)
         if (first) {
             first = false;
             self->mStatus = self->readyToRun();
-            result = (self->mStatus == OK);
+            result = (self->mStatus == NO_ERROR);
 
             if (result && !self->exitPending()) {
                 // Binder threads (and maybe others) rely on threadLoop
@@ -795,7 +768,7 @@ int Thread::_threadLoop(void* user)
         strong.clear();
         // And immediately, re-acquire a strong reference for the next loop
         strong = weak.promote();
-    } while(strong != nullptr);
+    } while(strong != 0);
 
     return 0;
 }

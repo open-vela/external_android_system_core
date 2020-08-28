@@ -34,8 +34,6 @@
 namespace android {
 // ---------------------------------------------------------------------------
 
-// DO NOT USE: please use std::condition_variable instead.
-
 /*
  * Condition variable class.  The implementation is system-dependent.
  *
@@ -124,7 +122,7 @@ inline status_t Condition::waitRelative(Mutex& mutex, nsecs_t reltime) {
 #else // __APPLE__
     // Apple doesn't support POSIX clocks.
     struct timeval t;
-    gettimeofday(&t, nullptr);
+    gettimeofday(&t, NULL);
     ts.tv_sec = t.tv_sec;
     ts.tv_nsec = t.tv_usec*1000;
 #endif
@@ -159,7 +157,7 @@ inline void Condition::broadcast() {
 #endif // !defined(_WIN32)
 
 // ---------------------------------------------------------------------------
-}  // namespace android
+}; // namespace android
 // ---------------------------------------------------------------------------
 
 #endif // _LIBS_UTILS_CONDITON_H
