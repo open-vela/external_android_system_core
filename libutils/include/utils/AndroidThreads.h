@@ -78,12 +78,7 @@ extern void androidSetCreateThreadFunc(android_create_thread_fn func);
 // should be one of the ANDROID_PRIORITY constants.  Returns INVALID_OPERATION
 // if the priority set failed, else another value if just the group set failed;
 // in either case errno is set.  Thread ID zero means current thread.
-// This is equivalent to androidSetThreadPriorityAndPolicy(tid, prio, true);
 extern int androidSetThreadPriority(pid_t tid, int prio);
-
-// Parameter "change_policy" indicates if sched policy should be changed. It needs
-// not be checked again if the change is done elsewhere like activity manager.
-extern int androidSetThreadPriorityAndPolicy(pid_t tid, int prio, bool change_policy);
 
 // Get the current priority of a particular thread. Returns one of the
 // ANDROID_PRIORITY constants or a negative result in case of error.
@@ -111,7 +106,7 @@ inline bool createThreadEtc(thread_func_t entryFunction,
                             const char* threadName = "android:unnamed_thread",
                             int32_t threadPriority = PRIORITY_DEFAULT,
                             size_t threadStackSize = 0,
-                            thread_id_t *threadId = nullptr)
+                            thread_id_t *threadId = 0)
 {
     return androidCreateThreadEtc(entryFunction, userData, threadName,
         threadPriority, threadStackSize, threadId) ? true : false;
@@ -123,7 +118,7 @@ inline thread_id_t getThreadId() {
 }
 
 // ----------------------------------------------------------------------------
-}  // namespace android
+}; // namespace android
 #endif  // __cplusplus
 // ----------------------------------------------------------------------------
 

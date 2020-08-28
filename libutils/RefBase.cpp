@@ -17,43 +17,30 @@
 #define LOG_TAG "RefBase"
 // #define LOG_NDEBUG 0
 
-#include <memory>
-
-#include <android-base/macros.h>
-
 #include <utils/RefBase.h>
 
 #include <utils/CallStack.h>
-
-#include <utils/Mutex.h>
 
 #ifndef __unused
 #define __unused __attribute__((__unused__))
 #endif
 
-// Compile with refcounting debugging enabled.
-#define DEBUG_REFS 0
-
-// The following three are ignored unless DEBUG_REFS is set.
+// compile with refcounting debugging enabled
+#define DEBUG_REFS                      0
 
 // whether ref-tracking is enabled by default, if not, trackMe(true, false)
 // needs to be called explicitly
-#define DEBUG_REFS_ENABLED_BY_DEFAULT 0
+#define DEBUG_REFS_ENABLED_BY_DEFAULT   0
 
 // whether callstack are collected (significantly slows things down)
-#define DEBUG_REFS_CALLSTACK_ENABLED 1
+#define DEBUG_REFS_CALLSTACK_ENABLED    1
 
 // folder where stack traces are saved when DEBUG_REFS is enabled
 // this folder needs to exist and be writable
-#define DEBUG_REFS_CALLSTACK_PATH "/data/debug"
+#define DEBUG_REFS_CALLSTACK_PATH       "/data/debug"
 
 // log all reference counting operations
-#define PRINT_REFS 0
-
-// Continue after logging a stack trace if ~RefBase discovers that reference
-// count has never been incremented. Normally we conspicuously crash in that
-// case.
-#define DEBUG_REFBASE_DESTRUCTION 1
+#define PRINT_REFS                      0
 
 // ---------------------------------------------------------------------------
 
@@ -197,7 +184,7 @@ public:
                 char inc = refs->ref >= 0 ? '+' : '-';
                 ALOGD("\t%c ID %p (ref %d):", inc, refs->id, refs->ref);
 #if DEBUG_REFS_CALLSTACK_ENABLED
-                CallStack::logStack(LOG_TAG, refs->stack.get());
+                refs->stack.log(LOG_TAG);
 #endif
                 refs = refs->next;
             }
@@ -211,14 +198,14 @@ public:
                 char inc = refs->ref >= 0 ? '+' : '-';
                 ALOGD("\t%c ID %p (ref %d):", inc, refs->id, refs->ref);
 #if DEBUG_REFS_CALLSTACK_ENABLED
-                CallStack::logStack(LOG_TAG, refs->stack.get());
+                refs->stack.log(LOG_TAG);
 #endif
                 refs = refs->next;
             }
         }
         if (dumpStack) {
             ALOGE("above errors at:");
-            CallStack::logStack(LOG_TAG);
+            CallStack stack(LOG_TAG);
         }
     }
 
@@ -292,7 +279,7 @@ public:
                      this);
             int rc = open(name, O_RDWR | O_CREAT | O_APPEND, 644);
             if (rc >= 0) {
-                (void)write(rc, text.string(), text.length());
+                write(rc, text.string(), text.length());
                 close(rc);
                 ALOGD("STACK TRACE for %p saved in %s", this, name);
             }
@@ -307,7 +294,7 @@ private:
         ref_entry* next;
         const void* id;
 #if DEBUG_REFS_CALLSTACK_ENABLED
-        CallStack::CallStackUPtr stack;
+        CallStack stack;
 #endif
         int32_t ref;
     };
@@ -324,7 +311,7 @@ private:
             ref->ref = mRef;
             ref->id = id;
 #if DEBUG_REFS_CALLSTACK_ENABLED
-            ref->stack = CallStack::getCurrent(2);
+            ref->stack.update(2);
 #endif
             ref->next = *refs;
             *refs = ref;
@@ -359,7 +346,7 @@ private:
                 ref = ref->next;
             }
 
-            CallStack::logStack(LOG_TAG);
+            CallStack stack(LOG_TAG);
         }
     }
 
@@ -386,7 +373,7 @@ private:
                      inc, refs->id, refs->ref);
             out->append(buf);
 #if DEBUG_REFS_CALLSTACK_ENABLED
-            out->append(CallStack::stackToString("\t\t", refs->stack.get()));
+            out->append(refs->stack.toString("\t\t"));
 #else
             out->append("\t\t(call stacks disabled)");
 #endif
@@ -423,7 +410,8 @@ void RefBase::incStrong(const void* id) const
         return;
     }
 
-    int32_t old __unused = refs->mStrong.fetch_sub(INITIAL_STRONG_VALUE, std::memory_order_relaxed);
+    int32_t old = refs->mStrong.fetch_sub(INITIAL_STRONG_VALUE,
+            std::memory_order_relaxed);
     // A decStrong() must still happen after us.
     ALOG_ASSERT(old > INITIAL_STRONG_VALUE, "0x%x too small", old);
     refs->mBase->onFirstRef();
@@ -454,11 +442,6 @@ void RefBase::decStrong(const void* id) const
     // and all accesses to refs happen before its deletion in the final decWeak.
     // The destructor can safely access mRefs because either it's deleting
     // mRefs itself, or it's running entirely before the final mWeak decrement.
-    //
-    // Since we're doing atomic loads of `flags`, the static analyzer assumes
-    // they can change between `delete this;` and `refs->decWeak(id);`. This is
-    // not the case. The analyzer may become more okay with this patten when
-    // https://bugs.llvm.org/show_bug.cgi?id=34365 gets resolved. NOLINTNEXTLINE
     refs->decWeak(id);
 }
 
@@ -481,7 +464,7 @@ void RefBase::forceIncStrong(const void* id) const
     case INITIAL_STRONG_VALUE:
         refs->mStrong.fetch_sub(INITIAL_STRONG_VALUE,
                 std::memory_order_relaxed);
-        FALLTHROUGH_INTENDED;
+        // fall through...
     case 0:
         refs->mBase->onFirstRef();
     }
@@ -713,19 +696,19 @@ RefBase::~RefBase()
         if (mRefs->mWeak.load(std::memory_order_relaxed) == 0) {
             delete mRefs;
         }
-    } else if (mRefs->mStrong.load(std::memory_order_relaxed) == INITIAL_STRONG_VALUE) {
+    } else if (mRefs->mStrong.load(std::memory_order_relaxed)
+            == INITIAL_STRONG_VALUE) {
         // We never acquired a strong reference on this object.
-#if DEBUG_REFBASE_DESTRUCTION
-        // Treating this as fatal is prone to causing boot loops. For debugging, it's
-        // better to treat as non-fatal.
-        ALOGD("RefBase: Explicit destruction, weak count = %d (in %p)", mRefs->mWeak.load(), this);
-        CallStack::logStack(LOG_TAG);
-#else
-        LOG_ALWAYS_FATAL("RefBase: Explicit destruction, weak count = %d", mRefs->mWeak.load());
-#endif
+        LOG_ALWAYS_FATAL_IF(mRefs->mWeak.load() != 0,
+                "RefBase: Explicit destruction with non-zero weak "
+                "reference count");
+        // TODO: Always report if we get here. Currently MediaMetadataRetriever
+        // C++ objects are inconsistently managed and sometimes get here.
+        // There may be other cases, but we believe they should all be fixed.
+        delete mRefs;
     }
     // For debugging purposes, clear mRefs.  Ineffective against outstanding wp's.
-    const_cast<weakref_impl*&>(mRefs) = nullptr;
+    const_cast<weakref_impl*&>(mRefs) = NULL;
 }
 
 void RefBase::extendObjectLifetime(int32_t mode)

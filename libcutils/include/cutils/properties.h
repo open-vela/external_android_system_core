@@ -14,30 +14,27 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef __CUTILS_PROPERTIES_H
+#define __CUTILS_PROPERTIES_H
 
 #include <sys/cdefs.h>
 #include <stddef.h>
-#include <stdint.h>
-
-#if __has_include(<sys/system_properties.h>)
 #include <sys/system_properties.h>
-#else
-#define PROP_VALUE_MAX 92
-#endif
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-//
-// Deprecated.
-//
-// See <android-base/properties.h> for better API.
-//
-
-#define PROPERTY_KEY_MAX PROP_NAME_MAX
-#define PROPERTY_VALUE_MAX PROP_VALUE_MAX
+/* System properties are *small* name value pairs managed by the
+** property service.  If your data doesn't fit in the provided
+** space it is not appropriate for a system property.
+**
+** WARNING: system/bionic/include/sys/system_properties.h also defines
+**          these, but with different names.  (TODO: fix that)
+*/
+#define PROPERTY_KEY_MAX   PROP_NAME_MAX
+#define PROPERTY_VALUE_MAX  PROP_VALUE_MAX
 
 /* property_get: returns the length of the value which will never be
 ** greater than PROPERTY_VALUE_MAX - 1 and will always be zero terminated.
@@ -46,7 +43,12 @@ extern "C" {
 ** If the property read fails or returns an empty value, the default
 ** value is used (if nonnull).
 */
-int property_get(const char* key, char* value, const char* default_value);
+int property_get(const char *key, char *value, const char *default_value)
+/* Sometimes we use not-Bionic with this, so we need this check. */
+#if defined(__BIONIC_FORTIFY)
+        __overloadable __RENAME_CLANG(property_get)
+#endif
+        ;
 
 /* property_get_bool: returns the value of key coerced into a
 ** boolean. If the property is not set, then the default value is returned.
@@ -117,14 +119,26 @@ int property_list(void (*propfn)(const char *key, const char *value, void *cooki
 
 #if defined(__clang__)
 
-/* Some projects use -Weverything; diagnose_if is clang-specific. */
+/* Some projects use -Weverything; enable_if is clang-specific.
+** FIXME: This is marked used because we'll otherwise get complaints about an
+** unused static function. This is more robust than marking it unused, since
+** -Wused-but-marked-unused is a thing that will complain if this function is
+** actually used, thus making FORTIFY noisier when an error happens. It's going
+** to go away anyway during our FORTIFY cleanup.
+**/
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgcc-compat"
-int property_get(const char* key, char* value, const char* default_value)
-    __clang_error_if(__bos(value) != __BIONIC_FORTIFY_UNKNOWN_SIZE &&
-                         __bos(value) < PROPERTY_VALUE_MAX,
-                     __property_get_err_str);
+__BIONIC_ERROR_FUNCTION_VISIBILITY
+int property_get(const char *key, char *value, const char *default_value)
+        __overloadable
+        __enable_if(__bos(value) != __BIONIC_FORTIFY_UNKNOWN_SIZE &&
+                    __bos(value) < PROPERTY_VALUE_MAX, __property_get_err_str)
+        __errorattr(__property_get_err_str)
+        __attribute__((used));
 #pragma clang diagnostic pop
+
+/* No object size? No FORTIFY.
+*/
 
 #else /* defined(__clang__) */
 
@@ -148,4 +162,6 @@ int property_get(const char *key, char *value, const char *default_value) {
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
