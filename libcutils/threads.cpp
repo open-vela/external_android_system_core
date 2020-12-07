@@ -16,18 +16,23 @@
 
 #include <cutils/threads.h>
 
+// For gettid.
 #if defined(__APPLE__)
+#include "AvailabilityMacros.h"  // For MAC_OS_X_VERSION_MAX_ALLOWED
 #include <stdint.h>
-#elif defined(__linux__)
+#include <stdlib.h>
+#include <sys/syscall.h>
+#include <sys/time.h>
+#include <unistd.h>
+#elif defined(__linux__) && !defined(__ANDROID__)
 #include <syscall.h>
 #include <unistd.h>
 #elif defined(_WIN32)
 #include <windows.h>
 #endif
 
-#if defined(__BIONIC__)
 // No definition needed for Android because we'll just pick up bionic's copy.
-#else
+#ifndef __ANDROID__
 pid_t gettid() {
 #if defined(__APPLE__)
   uint64_t tid;
@@ -38,5 +43,32 @@ pid_t gettid() {
 #elif defined(_WIN32)
   return GetCurrentThreadId();
 #endif
+}
+#endif  // __ANDROID__
+
+#if !defined(_WIN32)
+void*  thread_store_get( thread_store_t*  store )
+{
+    if (!store->has_tls)
+        return NULL;
+
+    return pthread_getspecific( store->tls );
+}
+
+extern void   thread_store_set( thread_store_t*          store,
+                                void*                    value,
+                                thread_store_destruct_t  destroy)
+{
+    pthread_mutex_lock( &store->lock );
+    if (!store->has_tls) {
+        if (pthread_key_create( &store->tls, destroy) != 0) {
+            pthread_mutex_unlock(&store->lock);
+            return;
+        }
+        store->has_tls = 1;
+    }
+    pthread_mutex_unlock( &store->lock );
+
+    pthread_setspecific( store->tls, value );
 }
 #endif
