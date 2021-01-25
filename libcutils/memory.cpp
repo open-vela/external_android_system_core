@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 The Android Open Source Project
+ * Copyright (C) 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,25 @@
  * limitations under the License.
  */
 
-#pragma once
+#include <cutils/memory.h>
 
-#include <stdint.h>
-#include <sys/types.h>
+#include <log/log.h>
 
-#ifdef __cplusplus
-extern "C" {
+#if !defined(__APPLE__)
+#include <malloc.h>
 #endif
 
-#if defined(__GLIBC__) || defined(_WIN32)
-/* Declaration of strlcpy() for platforms that don't already have it. */
-size_t strlcpy(char *dst, const char *src, size_t size);
+void process_disable_memory_mitigations() {
+    bool success = false;
+#ifdef __BIONIC__
+    success = mallopt(M_BIONIC_DISABLE_MEMORY_MITIGATIONS, 0);
 #endif
 
-// Disables memory mitigations for the entire process, and logs appropriately.
-void process_disable_memory_mitigations();
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
+    // TODO: if b/158870657 is fixed and scudo is used globally,
+    // we can assert on failure rather than just log.
+    if (success) {
+        ALOGI("Disabled memory mitigations for process.");
+    } else {
+        ALOGE("Could not disable memory mitigations for process.");
+    }
+}
