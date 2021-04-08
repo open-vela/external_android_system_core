@@ -90,11 +90,32 @@ TEST(String16Test, Insert) {
     EXPECT_STR16EQ(u"VerifyInsert me", tmp);
 }
 
+TEST(String16Test, RemoveDefault) {
+    String16 tmp("Verify me");
+    tmp.remove(4);
+    EXPECT_EQ(4U, tmp.size());
+    EXPECT_STR16EQ(u"Veri", tmp);
+}
+
 TEST(String16Test, Remove) {
     String16 tmp("Verify me");
     tmp.remove(2, 6);
     EXPECT_EQ(2U, tmp.size());
     EXPECT_STR16EQ(u" m", tmp);
+}
+
+TEST(String16Test, RemoveOutOfBounds) {
+    String16 tmp("Verify me");
+    tmp.remove(100, 6);
+    EXPECT_EQ(3U, tmp.size());
+    EXPECT_STR16EQ(u" me", tmp);
+}
+
+TEST(String16Test, MakeLower) {
+    String16 tmp("Verify Me!");
+    tmp.makeLower();
+    EXPECT_EQ(10U, tmp.size());
+    EXPECT_STR16EQ(u"verify me!", tmp);
 }
 
 TEST(String16Test, ReplaceAll) {
@@ -166,6 +187,14 @@ TEST(String16Test, StaticStringRemove) {
     tmp.remove(2, 6);
     EXPECT_EQ(2U, tmp.size());
     EXPECT_STR16EQ(u" m", tmp);
+    EXPECT_FALSE(tmp.isStaticString());
+}
+
+TEST(String16Test, StaticStringMakeLower) {
+    StaticString16 tmp(u"Verify me!");
+    tmp.makeLower();
+    EXPECT_EQ(10U, tmp.size());
+    EXPECT_STR16EQ(u"verify me!", tmp);
     EXPECT_FALSE(tmp.isStaticString());
 }
 
