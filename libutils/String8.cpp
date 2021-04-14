@@ -313,8 +313,8 @@ status_t String8::appendFormatV(const char* fmt, va_list args)
 
     if (n > 0) {
         size_t oldLength = length();
-        if (n > std::numeric_limits<size_t>::max() - 1 ||
-            oldLength > std::numeric_limits<size_t>::max() - n - 1) {
+        if ((size_t)n > SIZE_MAX - 1 ||
+            oldLength > SIZE_MAX - (size_t)n - 1) {
             return NO_MEMORY;
         }
         char* buf = lockBuffer(oldLength + n);
@@ -421,19 +421,6 @@ void String8::toLower()
     char* buf = lockBuffer(length);
     for (size_t i = length; i > 0; --i) {
         *buf = static_cast<char>(tolower(*buf));
-        buf++;
-    }
-    unlockBuffer(length);
-}
-
-void String8::toUpper()
-{
-    const size_t length = size();
-    if (length == 0) return;
-
-    char* buf = lockBuffer(length);
-    for (size_t i = length; i > 0; --i) {
-        *buf = static_cast<char>(toupper(*buf));
         buf++;
     }
     unlockBuffer(length);
