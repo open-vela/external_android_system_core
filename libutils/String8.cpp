@@ -25,8 +25,6 @@
 
 #include <ctype.h>
 
-#include <string>
-
 #include "SharedBuffer.h"
 
 /*
@@ -165,7 +163,9 @@ String8::String8(const char16_t* o, size_t len)
 }
 
 String8::String8(const char32_t* o)
-    : mString(allocFromUTF32(o, std::char_traits<char32_t>::length(o))) {}
+    : mString(allocFromUTF32(o, strlen32(o)))
+{
+}
 
 String8::String8(const char32_t* o, size_t len)
     : mString(allocFromUTF32(o, len))
@@ -313,8 +313,8 @@ status_t String8::appendFormatV(const char* fmt, va_list args)
 
     if (n > 0) {
         size_t oldLength = length();
-        if (n > std::numeric_limits<size_t>::max() - 1 ||
-            oldLength > std::numeric_limits<size_t>::max() - n - 1) {
+        if ((size_t)n > SIZE_MAX - 1 ||
+            oldLength > SIZE_MAX - (size_t)n - 1) {
             return NO_MEMORY;
         }
         char* buf = lockBuffer(oldLength + n);
