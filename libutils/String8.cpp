@@ -313,8 +313,8 @@ status_t String8::appendFormatV(const char* fmt, va_list args)
 
     if (n > 0) {
         size_t oldLength = length();
-        if (n > std::numeric_limits<size_t>::max() - 1 ||
-            oldLength > std::numeric_limits<size_t>::max() - n - 1) {
+        if ((size_t)n > SIZE_MAX - 1 ||
+            oldLength > SIZE_MAX - (size_t)n - 1) {
             return NO_MEMORY;
         }
         char* buf = lockBuffer(oldLength + n);
