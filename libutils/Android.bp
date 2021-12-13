@@ -76,7 +76,6 @@ cc_defaults {
         "-Wall",
         "-Werror",
         "-Wno-exit-time-destructors",
-        "-DANDROID_UTILS_REF_BASE_DISABLE_IMPLICIT_CONSTRUCTION",
     ],
     header_libs: [
         "libbase_headers",
@@ -100,6 +99,7 @@ cc_defaults {
 
             shared_libs: [
                 "libprocessgroup",
+                "libdl",
                 "libvndksupport",
             ],
 
@@ -178,8 +178,6 @@ cc_library {
         "//apex_available:platform",
     ],
     min_sdk_version: "apex_inherit",
-
-    afdo: true,
 }
 
 cc_library {
