@@ -48,13 +48,11 @@ cc_library_headers {
             header_libs: ["libbacktrace_headers"],
             export_header_lib_headers: ["libbacktrace_headers"],
         },
-        linux_glibc: {
+        host_linux: {
             header_libs: ["libbacktrace_headers"],
             export_header_lib_headers: ["libbacktrace_headers"],
         },
         linux_bionic: {
-            header_libs: ["libbacktrace_headers"],
-            export_header_lib_headers: ["libbacktrace_headers"],
             enabled: true,
         },
         windows: {
@@ -78,7 +76,6 @@ cc_defaults {
         "-Wall",
         "-Werror",
         "-Wno-exit-time-destructors",
-        "-DANDROID_UTILS_REF_BASE_DISABLE_IMPLICIT_CONSTRUCTION",
     ],
     header_libs: [
         "libbase_headers",
