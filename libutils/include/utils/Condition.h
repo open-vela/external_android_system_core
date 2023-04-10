@@ -99,7 +99,7 @@ inline Condition::Condition() : Condition(PRIVATE) {
 inline Condition::Condition(int type) {
     pthread_condattr_t attr;
     pthread_condattr_init(&attr);
-#if defined(__linux__)
+#if defined(__linux__) || defined(__NuttX__)
     pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
 #endif
 
@@ -119,7 +119,7 @@ inline status_t Condition::wait(Mutex& mutex) {
 }
 inline status_t Condition::waitRelative(Mutex& mutex, nsecs_t reltime) {
     struct timespec ts;
-#if defined(__linux__)
+#if defined(__linux__) || defined(__NuttX__)
     clock_gettime(CLOCK_MONOTONIC, &ts);
 #else // __APPLE__
     // Apple doesn't support POSIX clocks.
