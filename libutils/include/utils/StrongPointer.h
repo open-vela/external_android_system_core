@@ -202,7 +202,11 @@ void sp_report_stack_pointer();
 // the bottom of the stack.
 template <typename T>
 void sp<T>::check_not_on_stack(const void* ptr) {
+#ifdef __NuttX__
+    static constexpr int MIN_PAGE_SIZE = 0x800;   // 2K
+#else
     static constexpr int MIN_PAGE_SIZE = 0x1000;  // 4K. Safer than including sys/user.h.
+#endif
     static constexpr uintptr_t MIN_PAGE_MASK = ~static_cast<uintptr_t>(MIN_PAGE_SIZE - 1);
     uintptr_t my_frame_address =
             reinterpret_cast<uintptr_t>(__builtin_frame_address(0 /* this frame */));
