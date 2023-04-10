@@ -21,6 +21,8 @@
  * For backwards compatibility only
  * New users should include processgroup/sched_policy.h directly
  */
+#if defined(__ANDROID__)
 #include <processgroup/sched_policy.h>
+#endif
 
 #endif /* __CUTILS_SCHED_POLICY_H */ 
