@@ -110,7 +110,7 @@ class CAPABILITY("mutex") Mutex {
     // lock if possible; returns 0 on success, error otherwise
     status_t tryLock() TRY_ACQUIRE(0);
 
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) || defined(__NuttX__)
     // Lock the mutex, but don't wait longer than timeoutNs (relative time).
     // Returns 0 on success, TIMED_OUT for failure due to timeout expiration.
     //
@@ -188,7 +188,7 @@ inline void Mutex::unlock() {
 inline status_t Mutex::tryLock() {
     return -pthread_mutex_trylock(&mMutex);
 }
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) || defined(__NuttX__)
 inline status_t Mutex::timedLock(nsecs_t timeoutNs) {
     timeoutNs += systemTime(SYSTEM_TIME_REALTIME);
     const struct timespec ts = {

@@ -63,7 +63,7 @@ int64_t elapsedRealtime()
  */
 int64_t elapsedRealtimeNano()
 {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__NuttX__)
     struct timespec ts;
     int err = clock_gettime(CLOCK_BOOTTIME, &ts);
     if (CC_UNLIKELY(err)) {
