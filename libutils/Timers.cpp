@@ -29,7 +29,7 @@ static void checkClockId(int clock) {
     LOG_ALWAYS_FATAL_IF(clock < 0 || clock >= clock_id_max, "invalid clock id");
 }
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__NuttX__)
 nsecs_t systemTime(int clock) {
     checkClockId(clock);
     static constexpr clockid_t clocks[] = {CLOCK_REALTIME, CLOCK_MONOTONIC,
