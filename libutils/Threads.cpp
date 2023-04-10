@@ -164,7 +164,7 @@ int androidCreateRawThreadEtc(android_thread_func_t entryFunction,
     // assigned after the child starts.  Use memory barrier / lock if the child
     // or other threads also need access.
     if (threadId != nullptr) {
-        *threadId = (android_thread_id_t)thread; // XXX: this is not portable
+        *threadId = (android_thread_id_t)(uintptr_t)thread; // XXX: this is not portable
     }
     return 1;
 }
@@ -172,7 +172,7 @@ int androidCreateRawThreadEtc(android_thread_func_t entryFunction,
 #if defined(__ANDROID__)
 static pthread_t android_thread_id_t_to_pthread(android_thread_id_t thread)
 {
-    return (pthread_t) thread;
+    return (pthread_t)(uintptr_t)thread;
 }
 #endif
 
