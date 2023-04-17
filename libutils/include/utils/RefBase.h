@@ -554,7 +554,7 @@ template<typename T>
 wp<T>::wp(T* other)
     : m_ptr(other)
 {
-    m_refs = other ? m_refs = other->createWeak(this) : nullptr;
+    m_refs = other ? other->createWeak(this) : nullptr;
 }
 
 template <typename T>
