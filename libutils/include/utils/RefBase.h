@@ -208,6 +208,7 @@
 #ifndef ANDROID_REF_BASE_H
 #define ANDROID_REF_BASE_H
 
+#include <algorithm>
 #include <atomic>
 #include <functional>
 #include <type_traits>  // for common_type.
@@ -725,7 +726,7 @@ public:
             virtual ~Renamer() { }
         };
 
-        memmove(dest, src, n*sizeof(sp<TYPE>));
+        std::copy(src, src+n, dest);
         TYPE::renameRefs(n, Renamer(dest, src));
     }
 
