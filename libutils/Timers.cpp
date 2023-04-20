@@ -23,7 +23,7 @@
 #include <android-base/macros.h>
 #include <utils/Log.h>
 
-static constexpr size_t clock_id_max = 5;
+static constexpr int clock_id_max = 5;
 
 static void checkClockId(int clock) {
     LOG_ALWAYS_FATAL_IF(clock < 0 || clock >= clock_id_max, "invalid clock id");
