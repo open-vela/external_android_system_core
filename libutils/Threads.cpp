@@ -178,7 +178,7 @@ static pthread_t android_thread_id_t_to_pthread(android_thread_id_t thread)
 
 android_thread_id_t androidGetThreadId()
 {
-    return (android_thread_id_t)pthread_self();
+    return (android_thread_id_t)(uintptr_t)(pthread_self());
 }
 
 // ----------------------------------------------------------------------------
