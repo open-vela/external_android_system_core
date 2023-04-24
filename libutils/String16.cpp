@@ -350,7 +350,7 @@ void String16::release()
 bool String16::isStaticString() const {
     // See String16.h for notes on the memory layout of String16::StaticData and
     // SharedBuffer.
-    static_assert(sizeof(SharedBuffer) - offsetof(SharedBuffer, mClientMetadata) == 4);
+    assert(sizeof(SharedBuffer) - (size_t)&((SharedBuffer*)0)->mClientMetadata == 4);
     const uint32_t* p = reinterpret_cast<const uint32_t*>(mString);
     return (*(p - 1) & kIsSharedBufferAllocated) == 0;
 }
@@ -358,7 +358,7 @@ bool String16::isStaticString() const {
 size_t String16::staticStringSize() const {
     // See String16.h for notes on the memory layout of String16::StaticData and
     // SharedBuffer.
-    static_assert(sizeof(SharedBuffer) - offsetof(SharedBuffer, mClientMetadata) == 4);
+    assert(sizeof(SharedBuffer) - (size_t)&((SharedBuffer*)0)->mClientMetadata == 4);
     const uint32_t* p = reinterpret_cast<const uint32_t*>(mString);
     return static_cast<size_t>(*(p - 1));
 }
