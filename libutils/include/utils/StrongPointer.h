@@ -252,7 +252,7 @@ template <typename U>
 sp<T>::sp(U* other) : m_ptr(other) {
     if (other) {
         check_not_on_stack(other);
-        (static_cast<T*>(other))->incStrong(this);
+        other->incStrong(this);
     }
 }
 
