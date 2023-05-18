@@ -287,7 +287,7 @@ int Looper::pollInner(int timeoutMillis) {
             if (epollEvents & EPOLLIN) {
                 awoken();
             } else {
-                ALOGW("Ignoring unexpected epoll events 0x%x on wake event fd.", epollEvents);
+                ALOGW("Ignoring unexpected epoll events 0x%" PRIx32 " on wake event fd.", epollEvents);
             }
         } else {
             const auto& request_it = mRequests.find(seq);
@@ -300,7 +300,7 @@ int Looper::pollInner(int timeoutMillis) {
                 if (epollEvents & EPOLLHUP) events |= EVENT_HANGUP;
                 mResponses.push({.seq = seq, .events = events, .request = request});
             } else {
-                ALOGW("Ignoring unexpected epoll events 0x%x for sequence number %" PRIu64
+                ALOGW("Ignoring unexpected epoll events 0x%" PRIx32 " for sequence number %" PRIu64
                       " that is no longer registered.",
                       epollEvents, seq);
             }

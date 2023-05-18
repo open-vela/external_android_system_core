@@ -155,7 +155,7 @@ int androidCreateRawThreadEtc(android_thread_func_t entryFunction,
     pthread_attr_destroy(&attr);
     if (result != 0) {
         ALOGE("androidCreateRawThreadEtc failed (entry=%p, res=%d, %s)\n"
-             "(android threadPriority=%d)",
+             "(android threadPriority=%" PRId32 ")",
             entryFunction, result, strerror(errno), threadPriority);
         return 0;
     }
