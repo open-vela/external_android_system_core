@@ -434,7 +434,7 @@ void RefBase::incStrong(const void* id) const
 
     int32_t old __unused = refs->mStrong.fetch_sub(INITIAL_STRONG_VALUE, std::memory_order_relaxed);
     // A decStrong() must still happen after us.
-    ALOG_ASSERT(old > INITIAL_STRONG_VALUE, "0x%x too small", old);
+    ALOG_ASSERT(old > INITIAL_STRONG_VALUE, "0x%" PRIx32 " too small", old);
     refs->mBase->onFirstRef();
 }
 
@@ -752,7 +752,7 @@ RefBase::~RefBase()
         // However, this is dangerous because it's also common for code to use the
         // sp<T>(T*) constructor, assuming that if the object is around, it is already
         // owned by an sp<>.
-        ALOGW("RefBase: Explicit destruction, weak count = %d (in %p). Use sp<> to manage this "
+        ALOGW("RefBase: Explicit destruction, weak count = %" PRId32 " (in %p). Use sp<> to manage this "
               "object.",
               mRefs->mWeak.load(), this);
 
