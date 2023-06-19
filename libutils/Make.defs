@@ -16,5 +16,5 @@
 
 ifneq ($(CONFIG_ANDROID_LIBUTILS),)
 CONFIGURED_APPS += $(APPDIR)/external/android/system/core/libutils
-CXXFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(APPDIR)/external/android/system/core/libutils/include}
+CXXFLAGS += ${INCDIR_PREFIX}$(APPDIR)/external/android/system/core/libutils/include
 endif
