@@ -16,6 +16,6 @@
 
 ifneq ($(CONFIG_ANDROID_LIBCUTILS),)
 CONFIGURED_APPS += $(APPDIR)/external/android/system/core/libcutils
-CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(APPDIR)/external/android/system/core/libcutils/include}
-CXXFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(APPDIR)/external/android/system/core/libcutils/include}
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/external/android/system/core/libcutils/include
+CXXFLAGS += ${INCDIR_PREFIX}$(APPDIR)/external/android/system/core/libcutils/include
 endif
