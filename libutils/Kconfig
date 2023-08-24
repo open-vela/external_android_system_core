@@ -17,6 +17,6 @@
 config ANDROID_LIBUTILS
 	bool
 	depends on EVENT_FD
+	depends on FS_LARGEFILE
 	select ANDROID_LIBBASE
 	select ANDROID_LIBCUTILS
-	select FS_LARGEFILE
