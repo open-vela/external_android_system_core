@@ -64,7 +64,7 @@ int SimpleLooperCallback::handleEvent(int fd, int events, void* data) {
 // --- Looper ---
 
 // Maximum number of file descriptors for which to retrieve poll events each iteration.
-static const int EPOLL_MAX_EVENTS = 16;
+static const int EPOLL_MAX_EVENTS = 4;
 
 static pthread_once_t gTLSOnce = PTHREAD_ONCE_INIT;
 static pthread_key_t gTLSKey = 0;
