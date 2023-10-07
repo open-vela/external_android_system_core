@@ -37,12 +37,14 @@ using android::base::ConsumePrefix;
 using android::base::StartsWith;
 using android::base::Tokenize;
 
+namespace {
 struct Entry {
     std::string path;
     unsigned uid;
     unsigned gid;
     unsigned mode;
     uint64_t capabilities;
+};
 };
 
 static std::vector<Entry> canned_data;
