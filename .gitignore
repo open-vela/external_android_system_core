@@ -1,0 +1,11 @@
+.kconfig
+Kconfig
+.built
+.depend
+Make.dep
+*.o
+libcutils/.kconfig
+libcutils/.built
+libcutils/.depend
+libcutils/Make.dep
+libcutils/*.o
