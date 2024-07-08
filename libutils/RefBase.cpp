@@ -727,6 +727,20 @@ RefBase::weakref_type* RefBase::getWeakRefs() const
     return mRefs;
 }
 
+void RefBase::clearStrongAndWeakRefCount()
+{
+    int strong_count = getStrongCount();
+    int weak_count = mRefs->getWeakCount();
+
+    while (weak_count-- > 1) {
+        mRefs->decWeak(this);
+    }
+
+    while (strong_count-- > 0) {
+        decStrong(this);
+    }
+}
+
 RefBase::RefBase()
     : mRefs(new weakref_impl(this))
 {

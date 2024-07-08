@@ -328,6 +328,8 @@ public:
             
             weakref_type*   getWeakRefs() const;
 
+            void            clearStrongAndWeakRefCount();
+
             //! DEBUGGING ONLY: Print references held on object.
     inline  void            printRefs() const { getWeakRefs()->printRefs(); }
 
