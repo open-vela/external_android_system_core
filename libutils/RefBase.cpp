@@ -732,7 +732,7 @@ void RefBase::clearStrongAndWeakRefCount()
     int strong_count = getStrongCount();
     int weak_count = mRefs->getWeakCount();
 
-    while (weak_count-- > 1) {
+    while (weak_count-- > strong_count) {
         mRefs->decWeak(this);
     }
 
