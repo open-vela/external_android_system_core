@@ -18,9 +18,7 @@ include $(APPDIR)/Make.defs
 
 CXXEXT = .cpp
 
-ifeq ($(GCCVER),12)
 CXXFLAGS += -Wno-maybe-uninitialized
-endif
 
 CXXSRCS += android_get_control_file.cpp
 CXXSRCS += ashmem-host.cpp
