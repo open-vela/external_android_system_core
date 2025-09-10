@@ -291,7 +291,7 @@ int Looper::pollInner(int timeoutMillis) {
                 ALOGW("Ignoring unexpected epoll events 0x%" PRIx32 " on wake event fd.", epollEvents);
             }
         } else {
-            const auto& request_it = mRequests.find(seq);
+            const auto& request_it = std::find_if(mRequests.begin(), mRequests.end(), [seq](const auto& pair) {return pair.first == seq;});
             if (request_it != mRequests.end()) {
                 const auto& request = request_it->second;
                 int events = 0;
@@ -467,15 +467,15 @@ int Looper::addFd(int fd, int ident, int events, const sp<LooperCallback>& callb
         request.data = data;
 
         epoll_event eventItem = createEpollEvent(request.getEpollEvents(), seq);
-        auto seq_it = mSequenceNumberByFd.find(fd);
+        auto seq_it = std::find_if(mSequenceNumberByFd.begin(), mSequenceNumberByFd.end(), [fd](const auto& pair) { return pair.first == fd; });
         if (seq_it == mSequenceNumberByFd.end()) {
             int epollResult = epoll_ctl(mEpollFd.get(), EPOLL_CTL_ADD, fd, &eventItem);
             if (epollResult < 0) {
                 ALOGE("Error adding epoll events for fd %d: %s", fd, strerror(errno));
                 return -1;
             }
-            mRequests.emplace(seq, request);
-            mSequenceNumberByFd.emplace(fd, seq);
+            mRequests.emplace_back(seq, request);
+            mSequenceNumberByFd.emplace_back(fd, seq);
         } else {
             int epollResult = epoll_ctl(mEpollFd.get(), EPOLL_CTL_MOD, fd, &eventItem);
             if (epollResult < 0) {
@@ -511,8 +511,11 @@ int Looper::addFd(int fd, int ident, int events, const sp<LooperCallback>& callb
                 }
             }
             const SequenceNumber oldSeq = seq_it->second;
-            mRequests.erase(oldSeq);
-            mRequests.emplace(seq, request);
+            auto it = std::find_if(mRequests.begin(), mRequests.end(), [oldSeq](const auto& item) {return item.first == oldSeq;});
+            if (it != mRequests.end()) {
+              mRequests.erase(it);
+            }
+            mRequests.emplace_back(seq, request);
             seq_it->second = seq;
         }
     } // release lock
@@ -521,7 +524,7 @@ int Looper::addFd(int fd, int ident, int events, const sp<LooperCallback>& callb
 
 int Looper::removeFd(int fd) {
     AutoMutex _l(mLock);
-    const auto& it = mSequenceNumberByFd.find(fd);
+    const auto& it = std::find_if(mSequenceNumberByFd.begin(), mSequenceNumberByFd.end(), [fd](const auto& item) {return item.first == fd;});
     if (it == mSequenceNumberByFd.end()) {
         return 0;
     }
@@ -533,7 +536,7 @@ int Looper::removeSequenceNumberLocked(SequenceNumber seq) {
     ALOGD("%p ~ removeFd - fd=%d, seq=%u", this, fd, seq);
 #endif
 
-    const auto& request_it = mRequests.find(seq);
+    const auto& request_it = std::find_if(mRequests.begin(), mRequests.end(), [seq](const auto& item) {return item.first == seq;});
     if (request_it == mRequests.end()) {
         return 0;
     }
@@ -542,7 +545,10 @@ int Looper::removeSequenceNumberLocked(SequenceNumber seq) {
     // Always remove the FD from the request map even if an error occurs while
     // updating the epoll set so that we avoid accidentally leaking callbacks.
     mRequests.erase(request_it);
-    mSequenceNumberByFd.erase(fd);
+    auto it = std::find_if(mSequenceNumberByFd.begin(), mSequenceNumberByFd.end(), [fd](const auto& request) { return request.first == fd; });
+    if (it != mSequenceNumberByFd.end()) {
+        mSequenceNumberByFd.erase(it);
+    }
 
     int epollResult = epoll_ctl(mEpollFd.get(), EPOLL_CTL_DEL, fd, nullptr);
     if (epollResult < 0) {

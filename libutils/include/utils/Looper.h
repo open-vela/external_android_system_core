@@ -26,7 +26,7 @@
 
 #include <android-base/unique_fd.h>
 
-#include <unordered_map>
+#include <vector>
 #include <utility>
 
 namespace android {
@@ -468,8 +468,8 @@ private:
 
     // Locked maps of fds and sequence numbers monitoring requests.
     // Both maps must be kept in sync at all times.
-    std::unordered_map<SequenceNumber, Request> mRequests;               // guarded by mLock
-    std::unordered_map<int /*fd*/, SequenceNumber> mSequenceNumberByFd;  // guarded by mLock
+    std::vector<std::pair<SequenceNumber, Request>> mRequests;               // guarded by mLock
+    std::vector<std::pair<int /*fd*/, SequenceNumber>> mSequenceNumberByFd;  // guarded by mLock
 
     // The sequence number to use for the next fd that is added to the looper.
     // The sequence number 0 is reserved for the WakeEventFd.
