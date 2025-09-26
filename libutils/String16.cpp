@@ -19,6 +19,7 @@
 #include <utils/Log.h>
 
 #include <ctype.h>
+#include <assert.h>
 
 #include "SharedBuffer.h"
 
