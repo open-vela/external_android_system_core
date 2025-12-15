@@ -22,16 +22,13 @@ CXXFLAGS += -Wno-maybe-uninitialized
 
 CXXSRCS += android_get_control_file.cpp
 CXXSRCS += ashmem-host.cpp
-CXXSRCS += canned_fs_config.cpp
 CXXSRCS += config_utils.cpp
 CXXSRCS += fs_config.cpp
-CXXSRCS += fs.cpp
 CXXSRCS += hashmap.cpp
 CXXSRCS += iosched_policy.cpp
 CXXSRCS += load_file.cpp
 CXXSRCS += multiuser.cpp
 CXXSRCS += native_handle.cpp
-CXXSRCS += partition_utils.cpp
 CXXSRCS += record_stream.cpp
 CXXSRCS += socket_inaddr_any_server_unix.cpp
 CXXSRCS += socket_local_client_unix.cpp

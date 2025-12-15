@@ -38,16 +38,13 @@ if(CONFIG_ANDROID_LIBCUTILS)
     android
     PRIVATE android_get_control_file.cpp
             ashmem-host.cpp
-            canned_fs_config.cpp
             config_utils.cpp
             fs_config.cpp
-            fs.cpp
             hashmap.cpp
             iosched_policy.cpp
             load_file.cpp
             multiuser.cpp
             native_handle.cpp
-            partition_utils.cpp
             record_stream.cpp
             socket_inaddr_any_server_unix.cpp
             socket_local_client_unix.cpp
